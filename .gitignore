@@ -1,0 +1,284 @@
+# ================================
+# DevScope .gitignore
+# ================================
+
+# ========== 敏感信息（重要！）==========
+# 环境变量文件 - 包含 GitHub Token
+.env
+.env.local
+.env.*.local
+
+# API 密钥和配置
+*.key
+*.pem
+secrets.json
+config/secrets.yaml
+
+# ========== Python ==========
+# 虚拟环境
+DevScope/
+venv/
+env/
+ENV/
+.venv/
+
+# Python 编译文件
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# 分发/打包
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# 测试和覆盖率
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+.hypothesis/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+.python-version
+
+# Celery
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath
+*.sage.py
+
+# Spyder
+.spyderproject
+.spyproject
+
+# Rope
+.ropeproject
+
+# mkdocs
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre
+.pyre/
+
+# ========== Node.js / Frontend ==========
+# 依赖目录
+node_modules/
+jspm_packages/
+
+# 构建输出
+frontend/dist/
+frontend/build/
+frontend/.nuxt/
+frontend/.vuepress/dist
+frontend/.cache/
+
+# 日志文件
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# 依赖锁文件（可选，团队协作时建议保留）
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
+
+# ========== 数据库和缓存 ==========
+# SQLite
+*.db
+*.sqlite
+*.sqlite3
+
+# Redis dump
+dump.rdb
+
+# 缓存目录
+.cache/
+cache/
+*.cache
+
+# ========== IDE 和编辑器 ==========
+# VS Code
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+# JetBrains IDEs (PyCharm, WebStorm, etc.)
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+[._]*.s[a-v][a-z]
+[._]*.sw[a-p]
+[._]s[a-rt-v][a-z]
+[._]ss[a-gi-z]
+[._]sw[a-p]
+Session.vim
+Sessionx.vim
+.netrwhist
+*~
+tags
+[._]*.un~
+
+# Emacs
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+# ========== 操作系统 ==========
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# ========== 日志和临时文件 ==========
+# 日志
+*.log
+logs/
+*.log.*
+
+# 临时文件
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+*~.nib
+local_settings.py
+db.sqlite3-journal
+
+# ========== 项目特定 ==========
+# 测试数据
+test_data/
+sample_data/
+*.test.json
+
+# 文档构建输出
+docs/_build/
+docs/.doctrees/
+
+# 备份文件
+*.backup
+backup/
+
+# OpenDigger 本地缓存（如果有）
+opendigger_cache/
+
+# 用户上传文件（如果有）
+uploads/
+media/
+
+# ========== 其他 ==========
+# 压缩文件
+*.7z
+*.dmg
+*.gz
+*.iso
+*.jar
+*.rar
+*.tar
+*.zip
+
+# 编译的源文件
+*.com
+*.class
+*.dll
+*.exe
+*.o
+*.so
+
+# ========== 保留的文件（重要）==========
+# 确保这些文件被提交
+!.gitignore
+!requirements.txt
+!package.json
+!README.md
+!Prompt_context.md
