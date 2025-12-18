@@ -1,21 +1,281 @@
 {
   "metadata": {
-    "generated_at": "2025-12-18T21:34:43.498377",
+    "generated_at": "2025-12-18T22:19:55.127501",
     "version": "1.0",
     "description": "DevScope Phase 1 - 名人堂数据预置",
-    "total_developers": 4,
+    "total_developers": 40,
     "data_source": "OpenRank + GitHub"
   },
   "developers": {
+    "sindresorhus": {
+      "profile": {
+        "name": "Sindre Sorhus",
+        "bio": "Full-Time Open Source Maintainer",
+        "company": "Open Source",
+        "location": "Thailand",
+        "public_repos": 1200,
+        "followers": 65000,
+        "developer_type": "Frontend Developer",
+        "tech_keywords": [
+          "JavaScript",
+          "TypeScript",
+          "Node.js",
+          "Swift"
+        ]
+      },
+      "tech_tendency": {
+        "JavaScript": 0.35,
+        "TypeScript": 0.25,
+        "React": 0.2,
+        "Vue": 0.12,
+        "CSS": 0.05,
+        "HTML": 0.03
+      },
+      "activity_params": {
+        "weibull_k": 1.8,
+        "weibull_lambda": 3.5,
+        "prob_active_30d": 0.85
+      },
+      "confidence_weight": 1.0,
+      "source": "seed_data"
+    },
+    "kamranahmedse": {
+      "profile": {
+        "name": "Kamran Ahmed",
+        "bio": "Developer Roadmaps Creator",
+        "company": "roadmap.sh",
+        "location": "Dubai",
+        "public_repos": 120,
+        "followers": 82000,
+        "developer_type": "Backend Developer",
+        "tech_keywords": [
+          "JavaScript",
+          "Go",
+          "DevOps",
+          "Architecture"
+        ]
+      },
+      "tech_tendency": {
+        "Python": 0.25,
+        "Java": 0.2,
+        "Go": 0.15,
+        "C++": 0.15,
+        "Node.js": 0.1,
+        "Ruby": 0.08,
+        "Other": 0.07
+      },
+      "activity_params": {
+        "weibull_k": 1.8,
+        "weibull_lambda": 3.5,
+        "prob_active_30d": 0.85
+      },
+      "confidence_weight": 1.0,
+      "source": "seed_data"
+    },
+    "donnemartin": {
+      "profile": {
+        "name": "Donne Martin",
+        "bio": "System Design & Interview Prep",
+        "company": "Open Source",
+        "location": "USA",
+        "public_repos": 80,
+        "followers": 78000,
+        "developer_type": "Backend Developer",
+        "tech_keywords": [
+          "Python",
+          "AWS",
+          "System Design",
+          "Interview"
+        ]
+      },
+      "tech_tendency": {
+        "Python": 0.25,
+        "Java": 0.2,
+        "Go": 0.15,
+        "C++": 0.15,
+        "Node.js": 0.1,
+        "Ruby": 0.08,
+        "Other": 0.07
+      },
+      "activity_params": {
+        "weibull_k": 1.8,
+        "weibull_lambda": 3.5,
+        "prob_active_30d": 0.85
+      },
+      "confidence_weight": 1.0,
+      "source": "seed_data"
+    },
+    "jwasham": {
+      "profile": {
+        "name": "John Washam",
+        "bio": "Coding Interview University",
+        "company": "Google",
+        "location": "USA",
+        "public_repos": 45,
+        "followers": 91000,
+        "developer_type": "Backend Developer",
+        "tech_keywords": [
+          "Python",
+          "C++",
+          "Algorithms",
+          "Interview"
+        ]
+      },
+      "tech_tendency": {
+        "Python": 0.25,
+        "Java": 0.2,
+        "Go": 0.15,
+        "C++": 0.15,
+        "Node.js": 0.1,
+        "Ruby": 0.08,
+        "Other": 0.07
+      },
+      "activity_params": {
+        "weibull_k": 1.8,
+        "weibull_lambda": 3.5,
+        "prob_active_30d": 0.85
+      },
+      "confidence_weight": 1.0,
+      "source": "seed_data"
+    },
+    "karpathy": {
+      "profile": {
+        "name": "Andrej Karpathy",
+        "bio": "AI Researcher, ex-Tesla AI Director",
+        "company": "OpenAI",
+        "location": "San Francisco",
+        "public_repos": 35,
+        "followers": 125000,
+        "developer_type": "AI/ML Developer",
+        "tech_keywords": [
+          "Python",
+          "PyTorch",
+          "Deep Learning",
+          "AI"
+        ]
+      },
+      "tech_tendency": {
+        "Python": 0.5,
+        "CUDA": 0.15,
+        "C++": 0.15,
+        "Julia": 0.1,
+        "R": 0.05,
+        "Other": 0.05
+      },
+      "activity_params": {
+        "weibull_k": 1.8,
+        "weibull_lambda": 3.5,
+        "prob_active_30d": 0.85
+      },
+      "confidence_weight": 1.0,
+      "source": "seed_data"
+    },
+    "vinta": {
+      "profile": {
+        "name": "Vinta Chen",
+        "bio": "Awesome Python Creator",
+        "company": "Open Source",
+        "location": "Taiwan",
+        "public_repos": 95,
+        "followers": 48000,
+        "developer_type": "Backend Developer",
+        "tech_keywords": [
+          "Python",
+          "Django",
+          "Go",
+          "Backend"
+        ]
+      },
+      "tech_tendency": {
+        "Python": 0.25,
+        "Java": 0.2,
+        "Go": 0.15,
+        "C++": 0.15,
+        "Node.js": 0.1,
+        "Ruby": 0.08,
+        "Other": 0.07
+      },
+      "activity_params": {
+        "weibull_k": 1.5,
+        "weibull_lambda": 7.2,
+        "prob_active_30d": 0.6
+      },
+      "confidence_weight": 1.0,
+      "source": "seed_data"
+    },
+    "trekhleb": {
+      "profile": {
+        "name": "Oleksii Trekhleb",
+        "bio": "JavaScript Algorithms Author",
+        "company": "Open Source",
+        "location": "Europe",
+        "public_repos": 80,
+        "followers": 62000,
+        "developer_type": "Frontend Developer",
+        "tech_keywords": [
+          "JavaScript",
+          "Algorithms",
+          "React",
+          "TypeScript"
+        ]
+      },
+      "tech_tendency": {
+        "JavaScript": 0.35,
+        "TypeScript": 0.25,
+        "React": 0.2,
+        "Vue": 0.12,
+        "CSS": 0.05,
+        "HTML": 0.03
+      },
+      "activity_params": {
+        "weibull_k": 1.8,
+        "weibull_lambda": 3.5,
+        "prob_active_30d": 0.85
+      },
+      "confidence_weight": 1.0,
+      "source": "seed_data"
+    },
+    "trimstray": {
+      "profile": {
+        "name": "Trimstray",
+        "bio": "Security & DevOps Expert",
+        "company": "Open Source",
+        "location": "Poland",
+        "public_repos": 65,
+        "followers": 38000,
+        "developer_type": "DevOps/Infrastructure",
+        "tech_keywords": [
+          "Bash",
+          "Security",
+          "Linux",
+          "DevOps"
+        ]
+      },
+      "tech_tendency": {
+        "Go": 0.25,
+        "Python": 0.2,
+        "Bash": 0.2,
+        "Rust": 0.15,
+        "C": 0.1,
+        "Other": 0.1
+      },
+      "activity_params": {
+        "weibull_k": 1.5,
+        "weibull_lambda": 7.2,
+        "prob_active_30d": 0.6
+      },
+      "confidence_weight": 1.0,
+      "source": "seed_data"
+    },
     "torvalds": {
       "profile": {
         "name": "Linus Torvalds",
         "bio": "Linux Kernel Creator",
-        "company": "Open Source",
+        "company": "Linux Foundation",
         "location": "Portland, USA",
         "public_repos": 100,
         "followers": 180000,
-        "developer_type": "系统级/内核开发者",
+        "developer_type": "DevOps/Infrastructure",
         "tech_keywords": [
           "C",
           "Linux",
@@ -24,13 +284,44 @@
         ]
       },
       "tech_tendency": {
+        "Go": 0.25,
         "Python": 0.2,
-        "JavaScript": 0.15,
-        "Java": 0.15,
-        "Go": 0.12,
-        "Rust": 0.1,
-        "C++": 0.1,
-        "Other": 0.18
+        "Bash": 0.2,
+        "Rust": 0.15,
+        "C": 0.1,
+        "Other": 0.1
+      },
+      "activity_params": {
+        "weibull_k": 1.8,
+        "weibull_lambda": 3.5,
+        "prob_active_30d": 0.85
+      },
+      "confidence_weight": 1.0,
+      "source": "seed_data"
+    },
+    "yyx990803": {
+      "profile": {
+        "name": "Evan You",
+        "bio": "Vue.js Creator",
+        "company": "Vue.js",
+        "location": "Singapore",
+        "public_repos": 150,
+        "followers": 95000,
+        "developer_type": "Frontend Developer",
+        "tech_keywords": [
+          "JavaScript",
+          "TypeScript",
+          "Vue",
+          "Vite"
+        ]
+      },
+      "tech_tendency": {
+        "JavaScript": 0.35,
+        "TypeScript": 0.25,
+        "React": 0.2,
+        "Vue": 0.12,
+        "CSS": 0.05,
+        "HTML": 0.03
       },
       "activity_params": {
         "weibull_k": 1.8,
@@ -44,11 +335,11 @@
       "profile": {
         "name": "Guido van Rossum",
         "bio": "Python Creator",
-        "company": "Open Source",
+        "company": "Microsoft",
         "location": "USA",
         "public_repos": 50,
         "followers": 45000,
-        "developer_type": "编程语言设计者",
+        "developer_type": "Backend Developer",
         "tech_keywords": [
           "Python",
           "Language Design",
@@ -56,13 +347,78 @@
         ]
       },
       "tech_tendency": {
-        "Python": 0.2,
-        "JavaScript": 0.15,
-        "Java": 0.15,
-        "Go": 0.12,
-        "Rust": 0.1,
-        "C++": 0.1,
-        "Other": 0.18
+        "Python": 0.25,
+        "Java": 0.2,
+        "Go": 0.15,
+        "C++": 0.15,
+        "Node.js": 0.1,
+        "Ruby": 0.08,
+        "Other": 0.07
+      },
+      "activity_params": {
+        "weibull_k": 1.5,
+        "weibull_lambda": 7.2,
+        "prob_active_30d": 0.6
+      },
+      "confidence_weight": 1.0,
+      "source": "seed_data"
+    },
+    "matz": {
+      "profile": {
+        "name": "Yukihiro Matsumoto",
+        "bio": "Ruby Creator",
+        "company": "Ruby Association",
+        "location": "Japan",
+        "public_repos": 60,
+        "followers": 28000,
+        "developer_type": "Backend Developer",
+        "tech_keywords": [
+          "Ruby",
+          "Language Design",
+          "C"
+        ]
+      },
+      "tech_tendency": {
+        "Python": 0.25,
+        "Java": 0.2,
+        "Go": 0.15,
+        "C++": 0.15,
+        "Node.js": 0.1,
+        "Ruby": 0.08,
+        "Other": 0.07
+      },
+      "activity_params": {
+        "weibull_k": 1.5,
+        "weibull_lambda": 7.2,
+        "prob_active_30d": 0.6
+      },
+      "confidence_weight": 1.0,
+      "source": "seed_data"
+    },
+    "antirez": {
+      "profile": {
+        "name": "Salvatore Sanfilippo",
+        "bio": "Redis Creator",
+        "company": "Open Source",
+        "location": "Italy",
+        "public_repos": 90,
+        "followers": 32000,
+        "developer_type": "Backend Developer",
+        "tech_keywords": [
+          "C",
+          "Redis",
+          "Databases",
+          "Systems"
+        ]
+      },
+      "tech_tendency": {
+        "Python": 0.25,
+        "Java": 0.2,
+        "Go": 0.15,
+        "C++": 0.15,
+        "Node.js": 0.1,
+        "Ruby": 0.08,
+        "Other": 0.07
       },
       "activity_params": {
         "weibull_k": 1.5,
@@ -80,7 +436,7 @@
         "location": "Netherlands",
         "public_repos": 200,
         "followers": 8000,
-        "developer_type": "运行时/中间件开发者",
+        "developer_type": "Backend Developer",
         "tech_keywords": [
           "Node.js",
           "JavaScript",
@@ -88,13 +444,819 @@
         ]
       },
       "tech_tendency": {
+        "Python": 0.25,
+        "Java": 0.2,
+        "Go": 0.15,
+        "C++": 0.15,
+        "Node.js": 0.1,
+        "Ruby": 0.08,
+        "Other": 0.07
+      },
+      "activity_params": {
+        "weibull_k": 1.5,
+        "weibull_lambda": 7.2,
+        "prob_active_30d": 0.6
+      },
+      "confidence_weight": 1.0,
+      "source": "seed_data"
+    },
+    "tj": {
+      "profile": {
+        "name": "TJ Holowaychuk",
+        "bio": "Go, Node.js Pioneer",
+        "company": "Open Source",
+        "location": "Canada",
+        "public_repos": 400,
+        "followers": 42000,
+        "developer_type": "Backend Developer",
+        "tech_keywords": [
+          "Go",
+          "Node.js",
+          "JavaScript",
+          "CLI"
+        ]
+      },
+      "tech_tendency": {
+        "Python": 0.25,
+        "Java": 0.2,
+        "Go": 0.15,
+        "C++": 0.15,
+        "Node.js": 0.1,
+        "Ruby": 0.08,
+        "Other": 0.07
+      },
+      "activity_params": {
+        "weibull_k": 1.5,
+        "weibull_lambda": 7.2,
+        "prob_active_30d": 0.6
+      },
+      "confidence_weight": 1.0,
+      "source": "seed_data"
+    },
+    "defunkt": {
+      "profile": {
+        "name": "Chris Wanstrath",
+        "bio": "GitHub Co-Founder",
+        "company": "GitHub",
+        "location": "San Francisco",
+        "public_repos": 180,
+        "followers": 58000,
+        "developer_type": "Backend Developer",
+        "tech_keywords": [
+          "Ruby",
+          "Git",
+          "JavaScript",
+          "GitHub"
+        ]
+      },
+      "tech_tendency": {
+        "Python": 0.25,
+        "Java": 0.2,
+        "Go": 0.15,
+        "C++": 0.15,
+        "Node.js": 0.1,
+        "Ruby": 0.08,
+        "Other": 0.07
+      },
+      "activity_params": {
+        "weibull_k": 1.8,
+        "weibull_lambda": 3.5,
+        "prob_active_30d": 0.85
+      },
+      "confidence_weight": 1.0,
+      "source": "seed_data"
+    },
+    "fabpot": {
+      "profile": {
+        "name": "Fabien Potencier",
+        "bio": "Symfony Creator",
+        "company": "Symfony",
+        "location": "France",
+        "public_repos": 120,
+        "followers": 21000,
+        "developer_type": "Backend Developer",
+        "tech_keywords": [
+          "PHP",
+          "Symfony",
+          "Backend",
+          "Framework"
+        ]
+      },
+      "tech_tendency": {
+        "Python": 0.25,
+        "Java": 0.2,
+        "Go": 0.15,
+        "C++": 0.15,
+        "Node.js": 0.1,
+        "Ruby": 0.08,
+        "Other": 0.07
+      },
+      "activity_params": {
+        "weibull_k": 1.5,
+        "weibull_lambda": 7.2,
+        "prob_active_30d": 0.6
+      },
+      "confidence_weight": 1.0,
+      "source": "seed_data"
+    },
+    "chriscoyier": {
+      "profile": {
+        "name": "Chris Coyier",
+        "bio": "CSS-Tricks Founder",
+        "company": "CodePen",
+        "location": "USA",
+        "public_repos": 95,
+        "followers": 28000,
+        "developer_type": "Frontend Developer",
+        "tech_keywords": [
+          "CSS",
+          "HTML",
+          "JavaScript",
+          "Design"
+        ]
+      },
+      "tech_tendency": {
+        "JavaScript": 0.35,
+        "TypeScript": 0.25,
+        "React": 0.2,
+        "Vue": 0.12,
+        "CSS": 0.05,
+        "HTML": 0.03
+      },
+      "activity_params": {
+        "weibull_k": 1.5,
+        "weibull_lambda": 7.2,
+        "prob_active_30d": 0.6
+      },
+      "confidence_weight": 1.0,
+      "source": "seed_data"
+    },
+    "addyosmani": {
+      "profile": {
+        "name": "Addy Osmani",
+        "bio": "Google Chrome Team",
+        "company": "Google",
+        "location": "USA",
+        "public_repos": 250,
+        "followers": 45000,
+        "developer_type": "Frontend Developer",
+        "tech_keywords": [
+          "JavaScript",
+          "Performance",
+          "Chrome",
+          "Web"
+        ]
+      },
+      "tech_tendency": {
+        "JavaScript": 0.35,
+        "TypeScript": 0.25,
+        "React": 0.2,
+        "Vue": 0.12,
+        "CSS": 0.05,
+        "HTML": 0.03
+      },
+      "activity_params": {
+        "weibull_k": 1.5,
+        "weibull_lambda": 7.2,
+        "prob_active_30d": 0.6
+      },
+      "confidence_weight": 1.0,
+      "source": "seed_data"
+    },
+    "paulirish": {
+      "profile": {
+        "name": "Paul Irish",
+        "bio": "Google Chrome DevTools",
+        "company": "Google",
+        "location": "USA",
+        "public_repos": 180,
+        "followers": 52000,
+        "developer_type": "Frontend Developer",
+        "tech_keywords": [
+          "JavaScript",
+          "Chrome",
+          "DevTools",
+          "Performance"
+        ]
+      },
+      "tech_tendency": {
+        "JavaScript": 0.35,
+        "TypeScript": 0.25,
+        "React": 0.2,
+        "Vue": 0.12,
+        "CSS": 0.05,
+        "HTML": 0.03
+      },
+      "activity_params": {
+        "weibull_k": 1.8,
+        "weibull_lambda": 3.5,
+        "prob_active_30d": 0.85
+      },
+      "confidence_weight": 1.0,
+      "source": "seed_data"
+    },
+    "goodfeli": {
+      "profile": {
+        "name": "Ian Goodfellow",
+        "bio": "GAN Inventor",
+        "company": "DeepMind",
+        "location": "USA",
+        "public_repos": 25,
+        "followers": 38000,
+        "developer_type": "AI/ML Developer",
+        "tech_keywords": [
+          "Python",
+          "TensorFlow",
+          "GANs",
+          "Deep Learning"
+        ]
+      },
+      "tech_tendency": {
+        "Python": 0.5,
+        "CUDA": 0.15,
+        "C++": 0.15,
+        "Julia": 0.1,
+        "R": 0.05,
+        "Other": 0.05
+      },
+      "activity_params": {
+        "weibull_k": 1.5,
+        "weibull_lambda": 7.2,
+        "prob_active_30d": 0.6
+      },
+      "confidence_weight": 1.0,
+      "source": "seed_data"
+    },
+    "fchollet": {
+      "profile": {
+        "name": "François Chollet",
+        "bio": "Keras Creator",
+        "company": "Google",
+        "location": "USA",
+        "public_repos": 40,
+        "followers": 68000,
+        "developer_type": "AI/ML Developer",
+        "tech_keywords": [
+          "Python",
+          "Keras",
+          "TensorFlow",
+          "Deep Learning"
+        ]
+      },
+      "tech_tendency": {
+        "Python": 0.5,
+        "CUDA": 0.15,
+        "C++": 0.15,
+        "Julia": 0.1,
+        "R": 0.05,
+        "Other": 0.05
+      },
+      "activity_params": {
+        "weibull_k": 1.8,
+        "weibull_lambda": 3.5,
+        "prob_active_30d": 0.85
+      },
+      "confidence_weight": 1.0,
+      "source": "seed_data"
+    },
+    "lexfridman": {
+      "profile": {
+        "name": "Lex Fridman",
+        "bio": "AI Researcher & Podcaster",
+        "company": "MIT",
+        "location": "USA",
+        "public_repos": 35,
+        "followers": 42000,
+        "developer_type": "AI/ML Developer",
+        "tech_keywords": [
+          "Python",
+          "Deep Learning",
+          "Research",
+          "AI"
+        ]
+      },
+      "tech_tendency": {
+        "Python": 0.5,
+        "CUDA": 0.15,
+        "C++": 0.15,
+        "Julia": 0.1,
+        "R": 0.05,
+        "Other": 0.05
+      },
+      "activity_params": {
+        "weibull_k": 1.5,
+        "weibull_lambda": 7.2,
+        "prob_active_30d": 0.6
+      },
+      "confidence_weight": 1.0,
+      "source": "seed_data"
+    },
+    "fastai": {
+      "profile": {
+        "name": "Jeremy Howard",
+        "bio": "Fast.ai Founder",
+        "company": "fast.ai",
+        "location": "Australia",
+        "public_repos": 80,
+        "followers": 28000,
+        "developer_type": "AI/ML Developer",
+        "tech_keywords": [
+          "Python",
+          "PyTorch",
+          "Deep Learning",
+          "Education"
+        ]
+      },
+      "tech_tendency": {
+        "Python": 0.5,
+        "CUDA": 0.15,
+        "C++": 0.15,
+        "Julia": 0.1,
+        "R": 0.05,
+        "Other": 0.05
+      },
+      "activity_params": {
+        "weibull_k": 1.5,
+        "weibull_lambda": 7.2,
+        "prob_active_30d": 0.6
+      },
+      "confidence_weight": 1.0,
+      "source": "seed_data"
+    },
+    "soumith": {
+      "profile": {
+        "name": "Soumith Chintala",
+        "bio": "PyTorch Co-Creator",
+        "company": "Meta",
+        "location": "USA",
+        "public_repos": 95,
+        "followers": 25000,
+        "developer_type": "AI/ML Developer",
+        "tech_keywords": [
+          "Python",
+          "PyTorch",
+          "C++",
+          "Deep Learning"
+        ]
+      },
+      "tech_tendency": {
+        "Python": 0.5,
+        "CUDA": 0.15,
+        "C++": 0.15,
+        "Julia": 0.1,
+        "R": 0.05,
+        "Other": 0.05
+      },
+      "activity_params": {
+        "weibull_k": 1.5,
+        "weibull_lambda": 7.2,
+        "prob_active_30d": 0.6
+      },
+      "confidence_weight": 1.0,
+      "source": "seed_data"
+    },
+    "brendangregg": {
+      "profile": {
+        "name": "Brendan Gregg",
+        "bio": "Performance Engineering Expert",
+        "company": "Intel",
+        "location": "USA",
+        "public_repos": 65,
+        "followers": 28000,
+        "developer_type": "DevOps/Infrastructure",
+        "tech_keywords": [
+          "C",
+          "Performance",
+          "Linux",
+          "Systems"
+        ]
+      },
+      "tech_tendency": {
+        "Go": 0.25,
         "Python": 0.2,
-        "JavaScript": 0.15,
+        "Bash": 0.2,
+        "Rust": 0.15,
+        "C": 0.1,
+        "Other": 0.1
+      },
+      "activity_params": {
+        "weibull_k": 1.5,
+        "weibull_lambda": 7.2,
+        "prob_active_30d": 0.6
+      },
+      "confidence_weight": 1.0,
+      "source": "seed_data"
+    },
+    "kelseyhightower": {
+      "profile": {
+        "name": "Kelsey Hightower",
+        "bio": "Kubernetes Advocate",
+        "company": "Google",
+        "location": "USA",
+        "public_repos": 120,
+        "followers": 82000,
+        "developer_type": "DevOps/Infrastructure",
+        "tech_keywords": [
+          "Go",
+          "Kubernetes",
+          "Cloud",
+          "DevOps"
+        ]
+      },
+      "tech_tendency": {
+        "Go": 0.25,
+        "Python": 0.2,
+        "Bash": 0.2,
+        "Rust": 0.15,
+        "C": 0.1,
+        "Other": 0.1
+      },
+      "activity_params": {
+        "weibull_k": 1.8,
+        "weibull_lambda": 3.5,
+        "prob_active_30d": 0.85
+      },
+      "confidence_weight": 1.0,
+      "source": "seed_data"
+    },
+    "jessfraz": {
+      "profile": {
+        "name": "Jessie Frazelle",
+        "bio": "Containers & Security Expert",
+        "company": "Open Source",
+        "location": "USA",
+        "public_repos": 180,
+        "followers": 35000,
+        "developer_type": "DevOps/Infrastructure",
+        "tech_keywords": [
+          "Go",
+          "Docker",
+          "Security",
+          "Linux"
+        ]
+      },
+      "tech_tendency": {
+        "Go": 0.25,
+        "Python": 0.2,
+        "Bash": 0.2,
+        "Rust": 0.15,
+        "C": 0.1,
+        "Other": 0.1
+      },
+      "activity_params": {
+        "weibull_k": 1.5,
+        "weibull_lambda": 7.2,
+        "prob_active_30d": 0.6
+      },
+      "confidence_weight": 1.0,
+      "source": "seed_data"
+    },
+    "mjackson": {
+      "profile": {
+        "name": "Michael Jackson",
+        "bio": "React Router Creator",
+        "company": "Remix",
+        "location": "USA",
+        "public_repos": 140,
+        "followers": 38000,
+        "developer_type": "Frontend Developer",
+        "tech_keywords": [
+          "JavaScript",
+          "React",
+          "TypeScript",
+          "Web"
+        ]
+      },
+      "tech_tendency": {
+        "JavaScript": 0.35,
+        "TypeScript": 0.25,
+        "React": 0.2,
+        "Vue": 0.12,
+        "CSS": 0.05,
+        "HTML": 0.03
+      },
+      "activity_params": {
+        "weibull_k": 1.5,
+        "weibull_lambda": 7.2,
+        "prob_active_30d": 0.6
+      },
+      "confidence_weight": 1.0,
+      "source": "seed_data"
+    },
+    "zpao": {
+      "profile": {
+        "name": "Paul O'Shannessy",
+        "bio": "React Core Team",
+        "company": "Meta",
+        "location": "USA",
+        "public_repos": 85,
+        "followers": 12000,
+        "developer_type": "Frontend Developer",
+        "tech_keywords": [
+          "JavaScript",
+          "React",
+          "Flow",
+          "Web"
+        ]
+      },
+      "tech_tendency": {
+        "JavaScript": 0.35,
+        "TypeScript": 0.25,
+        "React": 0.2,
+        "Vue": 0.12,
+        "CSS": 0.05,
+        "HTML": 0.03
+      },
+      "activity_params": {
+        "weibull_k": 1.5,
+        "weibull_lambda": 7.2,
+        "prob_active_30d": 0.6
+      },
+      "confidence_weight": 1.0,
+      "source": "seed_data"
+    },
+    "kennethreitz": {
+      "profile": {
+        "name": "Kenneth Reitz",
+        "bio": "Requests Library Author",
+        "company": "Open Source",
+        "location": "USA",
+        "public_repos": 280,
+        "followers": 28000,
+        "developer_type": "Backend Developer",
+        "tech_keywords": [
+          "Python",
+          "Requests",
+          "CLI",
+          "API"
+        ]
+      },
+      "tech_tendency": {
+        "Python": 0.25,
+        "Java": 0.2,
+        "Go": 0.15,
+        "C++": 0.15,
+        "Node.js": 0.1,
+        "Ruby": 0.08,
+        "Other": 0.07
+      },
+      "activity_params": {
+        "weibull_k": 1.5,
+        "weibull_lambda": 7.2,
+        "prob_active_30d": 0.6
+      },
+      "confidence_weight": 1.0,
+      "source": "seed_data"
+    },
+    "jaredpalmer": {
+      "profile": {
+        "name": "Jared Palmer",
+        "bio": "Formik & Turborepo Creator",
+        "company": "Vercel",
+        "location": "USA",
+        "public_repos": 95,
+        "followers": 22000,
+        "developer_type": "Frontend Developer",
+        "tech_keywords": [
+          "TypeScript",
+          "React",
+          "Monorepo",
+          "Tools"
+        ]
+      },
+      "tech_tendency": {
+        "JavaScript": 0.35,
+        "TypeScript": 0.25,
+        "React": 0.2,
+        "Vue": 0.12,
+        "CSS": 0.05,
+        "HTML": 0.03
+      },
+      "activity_params": {
+        "weibull_k": 1.5,
+        "weibull_lambda": 7.2,
+        "prob_active_30d": 0.6
+      },
+      "confidence_weight": 1.0,
+      "source": "seed_data"
+    },
+    "getify": {
+      "profile": {
+        "name": "Kyle Simpson",
+        "bio": "You Don't Know JS Author",
+        "company": "Open Source",
+        "location": "USA",
+        "public_repos": 120,
+        "followers": 35000,
+        "developer_type": "Frontend Developer",
+        "tech_keywords": [
+          "JavaScript",
+          "Education",
+          "Async",
+          "Functional"
+        ]
+      },
+      "tech_tendency": {
+        "JavaScript": 0.35,
+        "TypeScript": 0.25,
+        "React": 0.2,
+        "Vue": 0.12,
+        "CSS": 0.05,
+        "HTML": 0.03
+      },
+      "activity_params": {
+        "weibull_k": 1.5,
+        "weibull_lambda": 7.2,
+        "prob_active_30d": 0.6
+      },
+      "confidence_weight": 1.0,
+      "source": "seed_data"
+    },
+    "jakevdp": {
+      "profile": {
+        "name": "Jake VanderPlas",
+        "bio": "Python Data Science Author",
+        "company": "Google",
+        "location": "USA",
+        "public_repos": 110,
+        "followers": 18000,
+        "developer_type": "Data Engineer",
+        "tech_keywords": [
+          "Python",
+          "NumPy",
+          "Pandas",
+          "Visualization"
+        ]
+      },
+      "tech_tendency": {
+        "Python": 0.35,
+        "Scala": 0.2,
+        "SQL": 0.2,
         "Java": 0.15,
-        "Go": 0.12,
-        "Rust": 0.1,
-        "C++": 0.1,
-        "Other": 0.18
+        "R": 0.05,
+        "Other": 0.05
+      },
+      "activity_params": {
+        "weibull_k": 1.5,
+        "weibull_lambda": 7.2,
+        "prob_active_30d": 0.6
+      },
+      "confidence_weight": 1.0,
+      "source": "seed_data"
+    },
+    "miguelgrinberg": {
+      "profile": {
+        "name": "Miguel Grinberg",
+        "bio": "Flask Mega-Tutorial Author",
+        "company": "Open Source",
+        "location": "Ireland",
+        "public_repos": 95,
+        "followers": 15000,
+        "developer_type": "Backend Developer",
+        "tech_keywords": [
+          "Python",
+          "Flask",
+          "WebSockets",
+          "Tutorial"
+        ]
+      },
+      "tech_tendency": {
+        "Python": 0.25,
+        "Java": 0.2,
+        "Go": 0.15,
+        "C++": 0.15,
+        "Node.js": 0.1,
+        "Ruby": 0.08,
+        "Other": 0.07
+      },
+      "activity_params": {
+        "weibull_k": 1.5,
+        "weibull_lambda": 7.2,
+        "prob_active_30d": 0.6
+      },
+      "confidence_weight": 1.0,
+      "source": "seed_data"
+    },
+    "wycats": {
+      "profile": {
+        "name": "Yehuda Katz",
+        "bio": "Ember.js & Rust Core",
+        "company": "Tilde",
+        "location": "USA",
+        "public_repos": 200,
+        "followers": 28000,
+        "developer_type": "Frontend Developer",
+        "tech_keywords": [
+          "JavaScript",
+          "Rust",
+          "Ember",
+          "Ruby"
+        ]
+      },
+      "tech_tendency": {
+        "JavaScript": 0.35,
+        "TypeScript": 0.25,
+        "React": 0.2,
+        "Vue": 0.12,
+        "CSS": 0.05,
+        "HTML": 0.03
+      },
+      "activity_params": {
+        "weibull_k": 1.5,
+        "weibull_lambda": 7.2,
+        "prob_active_30d": 0.6
+      },
+      "confidence_weight": 1.0,
+      "source": "seed_data"
+    },
+    "dhh": {
+      "profile": {
+        "name": "David Heinemeier Hansson",
+        "bio": "Ruby on Rails Creator",
+        "company": "Basecamp",
+        "location": "Denmark",
+        "public_repos": 85,
+        "followers": 92000,
+        "developer_type": "Backend Developer",
+        "tech_keywords": [
+          "Ruby",
+          "Rails",
+          "Web",
+          "Startup"
+        ]
+      },
+      "tech_tendency": {
+        "Python": 0.25,
+        "Java": 0.2,
+        "Go": 0.15,
+        "C++": 0.15,
+        "Node.js": 0.1,
+        "Ruby": 0.08,
+        "Other": 0.07
+      },
+      "activity_params": {
+        "weibull_k": 1.8,
+        "weibull_lambda": 3.5,
+        "prob_active_30d": 0.85
+      },
+      "confidence_weight": 1.0,
+      "source": "seed_data"
+    },
+    "rauchg": {
+      "profile": {
+        "name": "Guillermo Rauch",
+        "bio": "Vercel CEO, Next.js Creator",
+        "company": "Vercel",
+        "location": "USA",
+        "public_repos": 120,
+        "followers": 88000,
+        "developer_type": "Frontend Developer",
+        "tech_keywords": [
+          "JavaScript",
+          "React",
+          "Next.js",
+          "Serverless"
+        ]
+      },
+      "tech_tendency": {
+        "JavaScript": 0.35,
+        "TypeScript": 0.25,
+        "React": 0.2,
+        "Vue": 0.12,
+        "CSS": 0.05,
+        "HTML": 0.03
+      },
+      "activity_params": {
+        "weibull_k": 1.8,
+        "weibull_lambda": 3.5,
+        "prob_active_30d": 0.85
+      },
+      "confidence_weight": 1.0,
+      "source": "seed_data"
+    },
+    "sebmarkbage": {
+      "profile": {
+        "name": "Sebastian Markbåge",
+        "bio": "React Core Team Lead",
+        "company": "Meta",
+        "location": "USA",
+        "public_repos": 45,
+        "followers": 18000,
+        "developer_type": "Frontend Developer",
+        "tech_keywords": [
+          "JavaScript",
+          "React",
+          "Architecture",
+          "Concurrency"
+        ]
+      },
+      "tech_tendency": {
+        "JavaScript": 0.35,
+        "TypeScript": 0.25,
+        "React": 0.2,
+        "Vue": 0.12,
+        "CSS": 0.05,
+        "HTML": 0.03
       },
       "activity_params": {
         "weibull_k": 1.5,
@@ -112,7 +1274,7 @@
         "location": "San Francisco",
         "public_repos": 8,
         "followers": 21000,
-        "developer_type": "演示账户",
+        "developer_type": "Frontend Developer",
         "tech_keywords": [
           "GitHub",
           "Demo",
@@ -120,13 +1282,12 @@
         ]
       },
       "tech_tendency": {
-        "Python": 0.2,
-        "JavaScript": 0.15,
-        "Java": 0.15,
-        "Go": 0.12,
-        "Rust": 0.1,
-        "C++": 0.1,
-        "Other": 0.18
+        "JavaScript": 0.35,
+        "TypeScript": 0.25,
+        "React": 0.2,
+        "Vue": 0.12,
+        "CSS": 0.05,
+        "HTML": 0.03
       },
       "activity_params": {
         "weibull_k": 1.5,

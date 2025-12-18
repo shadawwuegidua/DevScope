@@ -1,7 +1,7 @@
 # DevScope Phase 1 补充 - 数据预置与冷启动
 
 **更新日期**: 2024-12-18  
-**版本**: Phase 1 v2.0  
+**版本**: Phase 1 v3.0  
 **新增功能**: 数据预置（Seeding）、冷启动处理（Cold Start）
 
 ---
@@ -10,33 +10,159 @@
 
 ### 1. 数据预置（Seeding）- `seed_data.py`
 
-**目的**: 预置 OpenRank 排名前 100 的高活跃开发者数据，作为"名人堂"展示
+**目的**: 预置 GitHub 社区顶级影响力的 40 位开发者数据，作为"名人堂"展示和社区基准
 
-**核心特性**:
-- ✅ 离线预置数据，无需实时 API 调用
-- ✅ 演示环境下的完美展示案例
-- ✅ API 受限时的备份方案
-- ✅ 社区基准数据（用于冷启动融合）
+#### 🎯 预置数据的核心作用
 
-**包含的社区代表开发者**:
-- `torvalds` - Linus Torvalds (Linux 创始人)
-- `gvanrossum` - Guido van Rossum (Python 创始人)
-- `bnoordhuis` - Ben Noordhuis (Node.js 核心贡献者)
-- `octocat` - GitHub Mascot (演示账户)
+根据 **Prompt_context.md 3.4 节**的要求，预置数据有三大关键用途：
 
-**使用示例**:
+**作用 1: 演示与展示（Demo & Presentation）**
+- ✅ **离线可用**：在答辩或演示时，无需等待 GitHub API 调用
+- ✅ **完美案例**：预置的都是高质量、数据完整的顶级开发者
+- ✅ **API 限流备份**：当 API 配额耗尽时，仍可展示功能
+
+**作用 2: 冷启动数据融合（Cold Start Handling）**
+- ✅ **社区基准库**：为新手用户提供 5 种开发者类型的平均技术分布
+- ✅ **数学建模基础**：实现 $P_{final} = w \cdot P_{user} + (1-w) \cdot P_{community}$ 公式
+- ✅ **置信度加权**：当用户项目数 < 5 时，自动融合社区均值
+
+**作用 3: 数据对比参照（Benchmarking）**
+- ✅ **技术标杆**：用户可与同类型的顶级开发者对比技术倾向
+- ✅ **活跃度参考**：提供不同活跃等级的时间分布参数
+- ✅ **趋势分析**：帮助用户理解行业技术栈演变趋势
+
+---
+
+#### 👥 预置的 40 位开发者分类（按领域）
+
+**🎨 前端开发 (Frontend) - 11 位**
+```
+sindresorhus    - 全职开源维护者，1200+ 仓库
+yyx990803       - Vue.js 创始人 Evan You
+trekhleb        - JavaScript 算法教学专家
+chriscoyier     - CSS-Tricks 创始人，CodePen
+addyosmani      - Google Chrome 团队，性能优化
+paulirish       - Chrome DevTools 核心开发
+mjackson        - React Router 创始人，Remix
+zpao            - React 核心团队成员
+jaredpalmer     - Formik & Turborepo 创建者
+getify          - You Don't Know JS 作者
+wycats          - Ember.js 核心，Rust 贡献者
+rauchg          - Vercel CEO, Next.js 创始人
+sebmarkbage     - React 核心团队领导
+octocat         - GitHub 吉祥物（演示账户）
+```
+
+**⚙️ 后端开发 (Backend) - 14 位**
+```
+kamranahmedse   - Developer Roadmaps 创建者
+donnemartin     - 系统设计面试专家
+jwasham         - 编程面试大学作者
+vinta           - Awesome Python 维护者
+gvanrossum      - Python 创始人 Guido van Rossum
+matz            - Ruby 创始人 Yukihiro Matsumoto
+antirez         - Redis 创建者 Salvatore Sanfilippo
+bnoordhuis      - Node.js 核心贡献者
+tj              - Go/Node.js 先驱，400+ 项目
+defunkt         - GitHub 联合创始人 Chris Wanstrath
+fabpot          - Symfony 框架创建者
+kennethreitz    - Python Requests 库作者
+miguelgrinberg  - Flask Mega-Tutorial 作者
+dhh             - Ruby on Rails 创建者
+```
+
+**🤖 AI/ML 开发 (AI/ML) - 5 位**
+```
+karpathy        - 前 Tesla AI 总监，OpenAI 研究员
+goodfeli        - GAN 发明者 Ian Goodfellow
+fchollet        - Keras 创建者 François Chollet
+lexfridman      - MIT AI 研究员，知名播客主持人
+fastai          - Fast.ai 创始人 Jeremy Howard
+soumith         - PyTorch 联合创建者
+```
+
+**🔧 DevOps/基础设施 (DevOps) - 6 位**
+```
+trimstray       - 安全与 DevOps 专家
+torvalds        - Linux 创始人 Linus Torvalds
+brendangregg    - 性能工程专家，eBPF 推广者
+kelseyhightower - Kubernetes 布道师
+jessfraz        - 容器与安全专家
+```
+
+**📊 数据工程 (Data) - 1 位**
+```
+jakevdp         - Python 数据科学作者，NumPy/Pandas
+```
+
+---
+
+#### 📈 数据分布统计
+
+| 开发者类型 | 数量 | 占比 | 代表技术栈 |
+|-----------|------|------|-----------|
+| Frontend Developer | 14 | 35% | JavaScript, TypeScript, React, Vue |
+| Backend Developer | 14 | 35% | Python, Go, Ruby, Node.js, PHP |
+| AI/ML Developer | 6 | 15% | Python, PyTorch, TensorFlow, CUDA |
+| DevOps/Infrastructure | 5 | 12.5% | Go, C, Bash, Kubernetes, Linux |
+| Data Engineer | 1 | 2.5% | Python, NumPy, Pandas, SQL |
+
+**技术关键词统计**（Top 10）:
+```
+JavaScript/TypeScript  → 18 位开发者
+Python                 → 15 位开发者
+Go                     → 6 位开发者
+React                  → 8 位开发者
+C/C++                  → 5 位开发者
+Ruby                   → 4 位开发者
+Node.js                → 5 位开发者
+Deep Learning          → 6 位开发者
+DevOps/Cloud           → 5 位开发者
+Rust                   → 2 位开发者
+```
+
+---
+
+#### 💡 使用场景示例
+
+**场景 1: 演示高质量开发者画像**
 ```python
-from seed_data import initialize_seed_database, load_seed_data
+from seed_data import get_developer_from_fame_hall
 
-# 初始化名人堂数据（应用启动时调用）
-initialize_seed_database()
+# 查询 Vue.js 创始人 Evan You
+evan = get_developer_from_fame_hall("yyx990803")
+print(evan["profile"]["name"])        # Evan You
+print(evan["tech_tendency"])          # {"JavaScript": 0.35, "TypeScript": 0.25, ...}
+print(evan["confidence_weight"])      # 1.0 (完全可信)
+```
 
-# 加载预置数据
-data = load_seed_data()
-# 输出: {"metadata": {...}, "developers": {...}}
+**场景 2: 对比用户与社区标杆**
+```python
+# 用户是前端新手，只有 2 个 React 项目
+user_tendency = {"JavaScript": 0.8, "React": 0.2}
 
-# 查询特定开发者
-fame_dev = get_developer_from_fame_hall("torvalds")
+# 对比同类型顶级开发者（如 Dan Abramov, Evan You）
+community_avg = get_community_average_tendency("Frontend Developer")
+# {"JavaScript": 0.35, "TypeScript": 0.25, "React": 0.20, ...}
+
+# 融合后更合理的预测
+blended = blend_user_and_community(user_tendency, community_avg, project_count=2)
+```
+
+**场景 3: API 限流备用方案**
+```python
+def analyze_developer(username):
+    # 先查名人堂（离线）
+    fame_data = get_developer_from_fame_hall(username)
+    if fame_data:
+        return fame_data  # 直接返回预置数据
+    
+    # 名人堂没有，再调用 GitHub API
+    try:
+        api_data = fetch_from_github_api(username)
+        return api_data
+    except RateLimitError:
+        return {"error": "API 配额耗尽，请稍后重试"}
 ```
 
 ---
