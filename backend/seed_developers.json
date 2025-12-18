@@ -1,0 +1,140 @@
+{
+  "metadata": {
+    "generated_at": "2025-12-18T21:34:43.498377",
+    "version": "1.0",
+    "description": "DevScope Phase 1 - 名人堂数据预置",
+    "total_developers": 4,
+    "data_source": "OpenRank + GitHub"
+  },
+  "developers": {
+    "torvalds": {
+      "profile": {
+        "name": "Linus Torvalds",
+        "bio": "Linux Kernel Creator",
+        "company": "Open Source",
+        "location": "Portland, USA",
+        "public_repos": 100,
+        "followers": 180000,
+        "developer_type": "系统级/内核开发者",
+        "tech_keywords": [
+          "C",
+          "Linux",
+          "Kernel",
+          "Git"
+        ]
+      },
+      "tech_tendency": {
+        "Python": 0.2,
+        "JavaScript": 0.15,
+        "Java": 0.15,
+        "Go": 0.12,
+        "Rust": 0.1,
+        "C++": 0.1,
+        "Other": 0.18
+      },
+      "activity_params": {
+        "weibull_k": 1.8,
+        "weibull_lambda": 3.5,
+        "prob_active_30d": 0.85
+      },
+      "confidence_weight": 1.0,
+      "source": "seed_data"
+    },
+    "gvanrossum": {
+      "profile": {
+        "name": "Guido van Rossum",
+        "bio": "Python Creator",
+        "company": "Open Source",
+        "location": "USA",
+        "public_repos": 50,
+        "followers": 45000,
+        "developer_type": "编程语言设计者",
+        "tech_keywords": [
+          "Python",
+          "Language Design",
+          "PEP"
+        ]
+      },
+      "tech_tendency": {
+        "Python": 0.2,
+        "JavaScript": 0.15,
+        "Java": 0.15,
+        "Go": 0.12,
+        "Rust": 0.1,
+        "C++": 0.1,
+        "Other": 0.18
+      },
+      "activity_params": {
+        "weibull_k": 1.5,
+        "weibull_lambda": 7.2,
+        "prob_active_30d": 0.6
+      },
+      "confidence_weight": 1.0,
+      "source": "seed_data"
+    },
+    "bnoordhuis": {
+      "profile": {
+        "name": "Ben Noordhuis",
+        "bio": "Node.js Core Contributor",
+        "company": "Open Source",
+        "location": "Netherlands",
+        "public_repos": 200,
+        "followers": 8000,
+        "developer_type": "运行时/中间件开发者",
+        "tech_keywords": [
+          "Node.js",
+          "JavaScript",
+          "C++"
+        ]
+      },
+      "tech_tendency": {
+        "Python": 0.2,
+        "JavaScript": 0.15,
+        "Java": 0.15,
+        "Go": 0.12,
+        "Rust": 0.1,
+        "C++": 0.1,
+        "Other": 0.18
+      },
+      "activity_params": {
+        "weibull_k": 1.5,
+        "weibull_lambda": 7.2,
+        "prob_active_30d": 0.6
+      },
+      "confidence_weight": 1.0,
+      "source": "seed_data"
+    },
+    "octocat": {
+      "profile": {
+        "name": "The Octocat",
+        "bio": "GitHub Mascot",
+        "company": "GitHub",
+        "location": "San Francisco",
+        "public_repos": 8,
+        "followers": 21000,
+        "developer_type": "演示账户",
+        "tech_keywords": [
+          "GitHub",
+          "Demo",
+          "Sample"
+        ]
+      },
+      "tech_tendency": {
+        "Python": 0.2,
+        "JavaScript": 0.15,
+        "Java": 0.15,
+        "Go": 0.12,
+        "Rust": 0.1,
+        "C++": 0.1,
+        "Other": 0.18
+      },
+      "activity_params": {
+        "weibull_k": 1.5,
+        "weibull_lambda": 7.2,
+        "prob_active_30d": 0.6
+      },
+      "confidence_weight": 1.0,
+      "source": "seed_data"
+    }
+  }
+}

@@ -368,5 +368,5 @@ def get_issues(self, owner: str, repo: str, per_page: int = 100) -> List[Dict[st
 ---
 
 **文档版本**：v1.0 (Phase 1)  
-**最后更新**：2024-12-17  
+**最后更新**：2025-12-17  
 **维护者**：DevScope 开发团队
