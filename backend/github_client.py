@@ -1,5 +1,6 @@
 import os
 import time
+from datetime import datetime, timedelta, timezone
 from typing import List, Optional, Dict, Any
 
 import requests
@@ -116,16 +117,46 @@ class GitHubClient:
         return commits
 
     def get_user_commit_activity(
-        self, username: str, limit_repos: int = 5, per_repo_commits: int = 100
-    ) -> List[str]:
-        repos = self.get_repos(username, per_page=limit_repos, max_pages=1)
+        self, username: str, limit_repos: int = 20, per_repo_commits: int = 500
+    ) -> Dict[str, Any]:
+        """获取用户最近一年的提交活动时间戳。
+
+        策略变更:
+        - 采用 "Rolling 12 Months" 观测窗口。
+        - limit_repos 和 per_repo_commits 仅作为兜底限制。
+
+        返回:
+        {
+            "commit_times": [...],
+            "window_start": "...",
+            "window_end": "..."
+        }
+        """
+        # 1. 计算时间窗口
+        now = datetime.now(timezone.utc)
+        since_date = now - timedelta(days=365)
+        since_str = since_date.isoformat()
+
+        # 2. 获取仓库列表
+        repos = self.get_repos(username, per_page=100, max_pages=5)
+        
         timestamps: List[str] = []
+        
+        # 3. 遍历仓库 (limit_repos 作为兜底)
         for repo in repos[:limit_repos]:
             owner = repo.get("owner", {}).get("login", username)
             name = repo.get("name")
             if not name:
                 continue
-            commits = self.get_commits(owner, name, per_page=per_repo_commits, max_pages=1)
+            
+            # 4. 获取 Commit (使用 since 参数)
+            commits = self.get_commits(
+                owner, 
+                name, 
+                since=since_str, 
+                per_page=100, 
+                max_pages=max(1, int(per_repo_commits / 100))
+            )
             for c in commits:
                 try:
                     ts = c["commit"]["author"]["date"]
@@ -133,4 +164,9 @@ class GitHubClient:
                         timestamps.append(ts)
                 except Exception:
                     continue
-        return timestamps
+        
+        return {
+            "commit_times": timestamps,
+            "window_start": since_str,
+            "window_end": now.isoformat()
+        }

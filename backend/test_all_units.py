@@ -82,11 +82,22 @@ if repos:
 print("\n[测试 5/6] 测试 get_user_commit_activity() 方法")
 print("-" * 70)
 
-timestamps = client.get_user_commit_activity("octocat", limit_repos=3, per_repo_commits=20)
-assert len(timestamps) > 0, "时间戳列表为空"
-assert all(isinstance(ts, str) for ts in timestamps), "时间戳格式错误"
-print(f"✅ 聚合提交时间序列成功 ({len(timestamps)} 条时间戳)")
-print(f"   示例: {timestamps[:3]}")
+# 使用 torvalds 以确保最近一年有活跃数据 (octocat 可能很久没更新)
+test_user = "torvalds"
+print(f"   正在获取用户 {test_user} 的数据...")
+activity_data = client.get_user_commit_activity(test_user, limit_repos=5, per_repo_commits=20)
+timestamps = activity_data["commit_times"]
+
+if len(timestamps) == 0:
+    print("⚠️  警告: 该用户最近一年无提交记录，无法验证时间戳格式")
+else:
+    assert all(isinstance(ts, str) for ts in timestamps), "时间戳格式错误"
+    print(f"✅ 聚合提交时间序列成功 ({len(timestamps)} 条时间戳)")
+    print(f"   示例: {timestamps[:3]}")
+
+assert "window_start" in activity_data
+assert "window_end" in activity_data
+print(f"   窗口: {activity_data['window_start']} -> {activity_data['window_end']}")
 
 # ========== 测试 6: OpenDigger 客户端 ==========
 print("\n[测试 6/6] 测试 OpenDigger 客户端")

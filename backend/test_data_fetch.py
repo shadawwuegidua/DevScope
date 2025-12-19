@@ -44,8 +44,10 @@ def main() -> None:
             print(f"- {date} {sha} {msg}")
 
     print("\n== 用户级提交时间序列 (聚合，最多 5 仓库) ==")
-    timestamps = gh.get_user_commit_activity(args.username, limit_repos=5, per_repo_commits=50)
+    activity_data = gh.get_user_commit_activity(args.username, limit_repos=5, per_repo_commits=50)
+    timestamps = activity_data["commit_times"]
     print(f"总计 {len(timestamps)} 条时间戳样本，示例前 10 条：")
+    print(f"观测窗口: {activity_data['window_start']} 至 {activity_data['window_end']}")
     for ts in timestamps[:10]:
         print(f"- {ts}")
 
