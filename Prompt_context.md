@@ -15,7 +15,7 @@ DevScope 项目实现规范文档
     Frontend: Vue 3, Vite, ECharts (用于核心可视化)。
     Data Source:
         GitHub REST API (实时获取 User Profile, Repos, Commits)。
-        penDigger (获取长期活跃度指标)。
+        OpenDigger (获取长期活跃度指标)。
     Storage/Cache: SQLite (轻量级) 或 Redis。
 3. 核心数学模型与统计原理 (Mathematical Logic)注意： 本项目严禁使用黑箱机器学习/深度学习模型。所有预测必须基于以下统计学原理，强调可解释性。
     3.1 开发者画像向量 (Developer Persona)将开发者 $U$ 建模为多维向量：$$U = (A, P, L, T)$$$A$ (Activity): 活跃度指标集合（Commit/PR/Issue计数）。$P$ (Projects): 参与项目集合。$L$ (Languages): 语言偏好分布。$T$ (Time): 时间序列特征。
@@ -117,3 +117,12 @@ DevScope 项目实现规范文档
     - 引入 sklearn 的分类 / 回归模型
     - 引入神经网络、embedding、transformer
     - 任何形式的“训练集/测试集”划分
+
+8. 文档管理规范 (Documentation Standards)
+    - **目录结构**: 所有文档需存放在 `docs/` 文件夹中，并按阶段 (e.g., `docs/Phase1/`, `docs/Phase2/`) 进行分类管理，避免根目录混乱。
+    - **算法理论文档**:
+        - 需创建专门的《数据算法理论说明文档》。
+        - **内容要求**:
+            1. **输入变量**: 明确说明从 `github_client.py` 和 `opendigger_client.py` 获取的具体数据及其获取方式。
+            2. **计算路径**: 描述 `modeling.py` 如何处理这些变量以及产生的计算结果。
+        - **格式要求**: 保持详细清晰，**严禁使用 LaTeX 格式**，专注于数学与数据理论，不涉及工程实现细节。
