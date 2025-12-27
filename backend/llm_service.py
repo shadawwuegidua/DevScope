@@ -42,13 +42,13 @@ async def predict_next_commit(commit_messages: List[str]) -> Optional[NextCommit
     recent_commits = commit_messages[:10]
     
     prompt = f"""
-System: 你是一个代码行为分析专家。请根据给定的 git commit 历史，预测该开发者下一次提交可能涉及的内容。使用中文输出，给出做出该预测的理由。
+System: 你是一个代码行为分析专家。请根据给定的 git commit 历史，预测该开发者下一次提交可能涉及的内容。使用中文输出，明确指出下一次提交可能是什么项目或者技术相关的内容，给出做出该预测的理由。
 Input: {json.dumps(recent_commits)}
 Output Format (JSON):
 {{
   "focus_area": "string (short tag)",
   "commit_type": "string (feat/fix/docs/style/refactor)",
-  "prediction": "string (max 40 words)"
+  "prediction": "string (最多四十字)"
 }}
 """
 

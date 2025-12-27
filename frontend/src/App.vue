@@ -16,7 +16,12 @@
       <button @click="fetchAnalysis" :disabled="loading || isRequesting" class="search-btn">
         {{ loading ? '分析中...' : '分析' }}
       </button>
+      <button @click="showDocs = true" class="doc-btn">
+        文档
+      </button>
     </div>
+
+    <DocModal :is-open="showDocs" @close="showDocs = false" />
 
     <!-- 加载状态 -->
     <div v-if="loading" class="loading">
@@ -132,6 +137,7 @@ import { api } from './api'
 import * as echarts from 'echarts'
 import GravityGraph from './components/GravityGraph.vue'
 import ContributionGraph from './components/ContributionGraph.vue'
+import DocModal from './components/DocModal.vue'
 
 type TechItem = {
   category: string
@@ -184,6 +190,7 @@ type AnalysisData = {
 const username = ref('')
 const loading = ref(false)
 const error = ref('')
+const showDocs = ref(false)
 const analysisData = ref<AnalysisData | null>(null)
 const tendencyChartRef = ref<HTMLDivElement>()
 const selectedTech = ref<TechItem | null>(null)
@@ -328,7 +335,15 @@ function renderTendencyChart() {
   const option: echarts.EChartsOption = {
     tooltip: {
       trigger: 'axis',
-      axisPointer: { type: 'shadow' }
+      axisPointer: { type: 'shadow' },
+      formatter: (params: any) => {
+        // 保留两位小数
+        if (Array.isArray(params)) {
+          const p = params[0]
+          return `${p.name}: ${Number(p.value).toFixed(2)}%`
+        }
+        return `${params.name}: ${Number(params.value).toFixed(2)}%`
+      }
     },
     grid: {
       left: '3%',
@@ -343,11 +358,19 @@ function renderTendencyChart() {
     },
     yAxis: {
       type: 'value',
-      name: '概率 (%)'
+      name: '概率 (%)',
+      axisLabel: {
+        formatter: (val: number) => Number(val).toFixed(2)
+      }
     },
     series: [{
       type: 'bar',
-      data: data.map(d => d.value),
+      data: data.map(d => Number(d.value.toFixed(2))),
+      label: {
+        show: true,
+        position: 'top',
+        formatter: ({ value }: any) => Number(value).toFixed(2) + '%'
+      },
       itemStyle: {
         color: '#667eea'
       }
@@ -448,6 +471,23 @@ watch(analysisData, (newVal) => {
 .search-btn:disabled {
   background: #ccc;
   cursor: not-allowed;
+}
+
+.doc-btn {
+  padding: 1rem 2rem;
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: #333;
+  background: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  transition: background 0.3s;
+}
+
+.doc-btn:hover {
+  background: #f0f0f0;
 }
 
 .loading {

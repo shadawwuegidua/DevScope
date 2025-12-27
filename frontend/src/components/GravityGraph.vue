@@ -97,12 +97,15 @@ function renderOption() {
   console.log('GravityGraph: 开始渲染，techTendency:', props.techTendency)
 
   // 构建中心节点（开发者头像）
+  // 直接使用 image://URL 显示头像，避免异步裁剪导致不显示
+  const avatarSymbol = props.avatarUrl ? `image://${props.avatarUrl}` : 'circle'
+  
   const centerNode = {
     id: 'center',
     name: props.username,
     type: 'center',
-    symbol: props.avatarUrl ? `image://${props.avatarUrl}` : 'circle',
-    symbolSize: 100,
+    symbol: avatarSymbol,
+    symbolSize: 110,
     fixed: true,
     x: safeWidth.value / 2,
     y: safeHeight.value / 2,
@@ -146,8 +149,6 @@ function renderOption() {
 
   props.techTendency.forEach((item, index) => {
     const p = clampP(item.probability)
-    // 调整距离计算，让概率高的更近
-    const length = (1 - p) * 300 + 50 
 
     const nodeId = `tech:${item.category}`
     const color = colors[index % colors.length]
@@ -158,6 +159,8 @@ function renderOption() {
       type: 'tech',
       category: item.category,
       probability: p,
+      draggable: true,
+      cursor: 'move',
       symbol: 'circle',
       // 根据概率调整大小: 40 ~ 90
       symbolSize: 40 + p * 50,
@@ -188,7 +191,8 @@ function renderOption() {
     links.push({
       source: 'center',
       target: nodeId,
-      value: length,
+      // 直接用概率作为 value，结合倒置的 edgeLength 区间确保 p 越大越近
+      value: p,
       lineStyle: {
         width: 1 + p * 4,
         curveness: 0.1,
@@ -199,8 +203,9 @@ function renderOption() {
   })
 
   const option: echarts.EChartsOption = {
-    backgroundColor: '#f8f9fa', // 淡灰色背景
-    animationDuration: 1500,
+    backgroundColor: '#ffffff', // 白色背景
+    animationDuration: 1000,
+    animationDurationUpdate: 800,
     animationEasingUpdate: 'quinticInOut',
     tooltip: {
       show: true,
@@ -221,16 +226,18 @@ function renderOption() {
       {
         type: 'graph',
         layout: 'force',
-        roam: true,
+        // 仅保留缩放，关闭平移，避免与节点拖拽冲突
+        roam: 'scale',
         draggable: true,
         focusNodeAdjacency: true,
         data: [centerNode, ...techNodes],
         links,
         force: {
-          edgeLength: [50, 400],
-          repulsion: 1500,
-          gravity: 0.05,
-          layoutAnimation: true
+          // 倒置区间：p 越大（value 越大）边越短
+          edgeLength: [350, 50],
+          repulsion: 600,
+          gravity: 0.08,
+          layoutAnimation: false
         }
       }
     ]
@@ -243,6 +250,17 @@ function renderOption() {
 
 onMounted(() => {
   initChart()
+  // 在拖拽节点时临时关闭 roam，避免误触画布交互
+  if (chart) {
+    chart.on('mousedown', (params: any) => {
+      if (params?.data?.type === 'tech') {
+        chart?.setOption({ series: [{ roam: false }] })
+      }
+    })
+    chart.on('mouseup', () => {
+      chart?.setOption({ series: [{ roam: 'scale' }] })
+    })
+  }
 })
 
 onBeforeUnmount(() => {
