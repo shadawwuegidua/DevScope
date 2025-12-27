@@ -25,7 +25,7 @@ from modeling import (
     DataPreprocessor,
 )
 
-load_dotenv()
+load_dotenv(os.path.join(os.path.dirname(__file__), '.env'))
 
 
 def test_seed_data_initialization():

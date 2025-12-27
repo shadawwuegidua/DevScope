@@ -14,7 +14,7 @@ if sys.platform == "win32":
     sys.stdout.reconfigure(encoding='utf-8')
 
 # 加载环境变量
-load_dotenv()
+load_dotenv(os.path.join(os.path.dirname(__file__), '.env'))
 
 print("=" * 70)
 print("DevScope Phase 1 - 完整单元测试")

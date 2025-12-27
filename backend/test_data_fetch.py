@@ -8,7 +8,7 @@ from github_client import GitHubClient
 from opendigger_client import load_opendigger_json, get_developer_metrics
 
 # 加载 .env 文件中的环境变量
-load_dotenv()
+load_dotenv(os.path.join(os.path.dirname(__file__), '.env'))
 
 
 def main() -> None:

@@ -4,12 +4,13 @@ OpenDigger 功能验证脚本
 """
 
 import argparse
+import os
 from typing import Dict, Any, List
 
 from dotenv import load_dotenv
 from opendigger_client import load_opendigger_json
 
-load_dotenv()
+load_dotenv(os.path.join(os.path.dirname(__file__), '.env'))
 
 
 def test_repo_openrank(owner: str, repo: str) -> None:

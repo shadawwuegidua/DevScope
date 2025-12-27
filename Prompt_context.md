@@ -107,8 +107,42 @@ DevScope 项目实现规范文档
         - 必须使用 `scipy`, `numpy`, `pandas`。
         - 函数 Docstring 必须包含 LaTeX 格式的数学公式。
         - 建模逻辑必须是纯函数（Pure Functions），便于测试。
-    Phase 3: Backend API整合 FastAPI，设置 Pydantic 模型，联调数据层。
-    Phase 4: Frontend Visualization搭建 Vue 框架，集成 ECharts，对接 API。
+    Phase 3: Backend API (FastAPI Integration)
+        目标：将 Phase 1 的数据获取与 Phase 2 的数学模型封装为高性能 REST API。
+
+        项目入口 (main.py):
+
+        实现 FastAPI 应用，配置 CORS 跨域支持（允许前端 Vite 默认端口 5173 访问）。
+
+        集成 GitHubClient 和 modeling.py 中的逻辑。
+
+        核心接口逻辑 (GET /api/analyze/{username}):
+
+        数据流：接收用户名 -> 调用 github_client 获取原始数据 -> 传入 modeling.py 进行分析 -> 返回 DeveloperAnalysis 响应。
+
+        缓存机制：实现一个简单的本地缓存（如使用 dict 或 diskcache），缓存分析结果 24 小时，避免重复请求 GitHub API 导致限流。
+
+        错误处理：
+
+        若用户不存在，返回 404 及友好提示。
+
+        若 API 限流，返回 503 及重试时间提示。
+
+        匹配度接口 (POST /api/match):
+
+        输入：username 和 target_stack (技术栈列表)。
+
+        输出：基于 3.5 节公式的匹配分值。
+    Phase 4: Frontend Visualization (Vue 3 + ECharts)
+        目标：构建一个极简、科技感的 BI 仪表盘，核心展示“预测性”数据。
+            组件结构:
+                SearchBar.vue: 带有加载状态（Loading）的大搜索框。
+                ProfileCard.vue: 展示用户基础信息及 置信度权重 (w)。
+                AnalysisDashboard.vue: 核心布局容器。
+            核心图表实现 (ECharts):
+                技术倾向柱状图 (Tendency Chart):展示 $P(T_i)$ 概率，对“推荐技术栈”使用金黄色高亮，并附带解释文案。
+                活跃时间分布图 (Activity Curve):绘制 Weibull 拟合曲线（PDF），横轴为间隔天数，纵轴为概率密度。标注 $P(T \le 30)$ 的覆盖区域，显示“下月活跃概率”。
+                重点：技术关系引力图 (Tech Relation Gravity Graph):类型: series: 'graph', layout: 'force'。节点定义: 中心节点为用户头像；四周节点为技术标签（Vue, AI, Rust 等）。引力逻辑: 连线长度 $L = (1 - P(T_i)) \times 500$。概率越高，距离中心越近。视觉引导: 使用不同深浅的颜色表示概率区间，高概率节点带有呼吸灯动画效果。
 7. 提示词/代码风格要求 (Prompting Rules)
     代码注释：所有涉及数学公式的函数，必须在 Docstring 中写明对应的数学公式（LaTeX 格式）。
     错误处理：对于网络请求失败、数据不足（<5 个项目）的情况，必须有显式的 try-except 和用户提示。
@@ -120,9 +154,3 @@ DevScope 项目实现规范文档
 
 8. 文档管理规范 (Documentation Standards)
     - **目录结构**: 所有文档需存放在 `docs/` 文件夹中，并按阶段 (e.g., `docs/Phase1/`, `docs/Phase2/`) 进行分类管理，避免根目录混乱。
-    - **算法理论文档**:
-        - 需创建专门的《数据算法理论说明文档》。
-        - **内容要求**:
-            1. **输入变量**: 明确说明从 `github_client.py` 和 `opendigger_client.py` 获取的具体数据及其获取方式。
-            2. **计算路径**: 描述 `modeling.py` 如何处理这些变量以及产生的计算结果。
-        - **格式要求**: 保持详细清晰，**严禁使用 LaTeX 格式**，专注于数学与数据理论，不涉及工程实现细节。

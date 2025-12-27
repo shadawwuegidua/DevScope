@@ -25,7 +25,7 @@ from modeling import (
     is_cold_start,
 )
 
-load_dotenv()
+load_dotenv(os.path.join(os.path.dirname(__file__), '.env'))
 
 
 def print_section(title):
