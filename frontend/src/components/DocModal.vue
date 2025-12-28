@@ -2,13 +2,16 @@
   <div v-if="isOpen" class="modal-overlay" @click.self="close">
     <div class="modal-content">
       <button class="close-btn" @click="close">×</button>
-      <div class="markdown-body" v-html="renderedContent"></div>
+      <div v-if="canShowPdf" class="pdf-container">
+        <iframe :src="pdfUrl" class="pdf-frame" title="Documentation PDF"></iframe>
+      </div>
+      <div v-else class="markdown-body" v-html="renderedContent"></div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import MarkdownIt from 'markdown-it'
 // @ts-ignore
 import markdownItKatex from 'markdown-it-katex'
@@ -16,6 +19,7 @@ import { algorithmDoc } from '../assets/algorithmDoc'
 
 const props = defineProps<{
   isOpen: boolean
+  pdfUrl?: string
 }>()
 
 const emit = defineEmits<{
@@ -30,9 +34,30 @@ const md = new MarkdownIt({
 
 md.use(markdownItKatex)
 
-const renderedContent = computed(() => {
-  return md.render(algorithmDoc)
-})
+const renderedContent = computed(() => md.render(algorithmDoc))
+
+const canShowPdf = ref(false)
+
+watch(
+  () => props.isOpen,
+  async (open) => {
+    if (!open) {
+      canShowPdf.value = false
+      return
+    }
+    if (!props.pdfUrl) {
+      canShowPdf.value = false
+      return
+    }
+    try {
+      const resp = await fetch(props.pdfUrl, { method: 'HEAD' })
+      canShowPdf.value = resp.ok
+    } catch {
+      canShowPdf.value = false
+    }
+  },
+  { immediate: true }
+)
 
 function close() {
   emit('close')
@@ -88,6 +113,17 @@ function close() {
   color: #333;
   line-height: 1.6;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+}
+
+.pdf-container {
+  width: 100%;
+  height: calc(90vh - 6rem);
+}
+
+.pdf-frame {
+  width: 100%;
+  height: 100%;
+  border: none;
 }
 
 :deep(h1) {

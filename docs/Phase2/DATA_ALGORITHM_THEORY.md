@@ -2,7 +2,34 @@
 
 本文档详细阐述 DevScope 项目中的核心算法理论，包括输入变量的数学定义、模型参数设定以及具体的计算路径。所有数学公式均采用 LaTeX 格式书写，以确保严谨性。
 
-## 1. 符号定义与参数表 (Symbol Definitions and Parameters)
+## 1. OpenRank 计算原理与系统实现 (Core Requirement)
+
+OpenRank 是面向开源生态的影响力评分，基于协作网络的传播模型（类似 PageRank）。每个节点的得分会从其入边累积并按出边分摊，平衡由阻尼因子控制：
+
+$$
+\operatorname{extOpenRank}(v) = \alpha \sum_{u \in \operatorname{in}(v)} \frac{\operatorname{OpenRank}(u)}{\operatorname{out}(u)} + (1-\alpha) \cdot \text{base}
+$$
+
+- 节点：开发者、仓库、Issue、PR 等。
+- 边权：Commit、Review、Issue/PR 互动等贡献行为的加权。
+- 阻尼因子 $\alpha$：常取 0.85，用于防止循环放大并引入基础分布。
+- 时间衰减：近期行为权重更高（由官方离线计算体现）。
+
+本项目对 OpenRank 的处理遵循如下“严格与代码一致”的规则：
+
+- 概念层面：OpenRank 衡量的是开发者或仓库在开源网络中的综合影响力，来源于官方离线计算结果；本项目不在本地重算该指标，上式用于原理说明。
+- 数据来源：通过 OpenDigger 官方静态 API 获取 JSON 数据。
+    - 开发者：`https://oss.x-lab.info/open_digger/github/{username}/openrank.json`
+    - 仓库：`https://oss.x-lab.info/open_digger/github/{owner}/{repo}/openrank.json`
+- 年度值选择：仅从键形如 "YYYY" 的年度条目中选取最新年份的值进行展示；形如 "YYYY-MM" 的月度条目不参与选择。
+- 数值处理：返回值统一保留两位小数；若 API 返回 404 或解析失败则视为无数据，返回 None（前端显示为 N/A）。
+- 代码对应：
+    - 开发者 OpenRank：`backend/opendigger_client.py` 中的 `get_user_openrank(username, timeout)` 完成上述逻辑（包含年度筛选与两位小数保留）。
+    - 仓库 OpenRank：`backend/opendigger_client.py` 中的 `get_repo_openrank(owner, repo, timeout)` 完成相同的年度筛选与返回处理。
+
+一致性声明：本文档的 OpenRank 描述与当前实现完全一致。若未来需要在本地重算 OpenRank，则需另行引入关系图构建、时间衰减权重、迭代求解等模块，不属于本项目当前范围。
+
+## 2. 符号定义与参数表 (Symbol Definitions and Parameters)
 
 ### 1.1 变量符号定义 (Variable Symbols)
 
@@ -14,8 +41,8 @@
 | $\mathcal{C}$ | 提交时间戳集合 (Commit Timestamps) | `github_client.get_user_commit_activity` |
 | $t_i$ | 第 $i$ 次提交的时间点 | $t_i \in \mathcal{C}, t_i \in W_{obs}$ |
 | $\Delta t_i$ | 相邻提交的时间间隔 (Time Interval) | $\Delta t_i = t_{i+1} - t_i$ |
-| $\mathcal{R}$ | 用户参与的仓库集合 (Repositories) | `github_client.get_repos` |
-| $\mathcal{L}$ | 技术标签/语言集合 (Topics/Languages) | 从 $\mathcal{R}$ 中提取的 `language` 和 `topics` |
+| $\mathcal{R}$ | 用户参与的仓库集合 (Repositories) | `github_client.get_user_repos_union` (拥有仓库 ∪ 参与贡献仓库) |
+| $\mathcal{L}$ | 技术标签/语言集合 (Topics/Languages) | 从 $\mathcal{R}$ 中提取的 `language` 和 `topics`；Topic 仅指真实仓库 `topics` 标签，不对语言兜底 |
 | $N_{proj}$ | 参与项目总数 (Total Projects) | $|\mathcal{R}|$ 或 `user.public_repos` |
 | $n_k$ | 特定技术 $k$ 的出现频次 | Count of topic $k$ in $\mathcal{L}$ |
 | $K$ | 技术类别的总数 (Total Categories) | $|\text{unique}(\mathcal{L})|$ |
@@ -39,7 +66,7 @@
 
 ---
 
-## 2. 输入变量详解 (Input Variables Detail)
+## 3. 输入变量详解 (Input Variables Detail)
 
 本系统的输入变量 $X$ 由两部分组成：$X = \{D_{github}, D_{od}\}$。
 
@@ -81,20 +108,20 @@
 
 ---
 
-## 3. 计算路径与数学模型 (Calculation Path and Mathematical Models)
+## 4. 计算路径与数学模型 (Calculation Path and Mathematical Models)
 
-### 3.1 活跃时间分布建模 (Activity Time Distribution Modeling)
+### 4.1 活跃时间分布建模 (Activity Time Distribution Modeling)
 
 目标是预测开发者下一次活跃的时间概率。我们假设开发者的活跃间隔服从 **Weibull 分布**。
 
-#### 3.1.1 间隔序列生成
+#### 4.1.1 间隔序列生成
 首先计算相邻提交的时间间隔序列 $\Delta T$：
 $$
 \Delta T = \{\Delta t_i \mid \Delta t_i = t_{i+1} - t_i, \quad 1 \le i < m\}
 $$
 单位通常转换为 **天 (Days)**。
 
-#### 3.1.2 Weibull 分布拟合 (MLE)
+#### 4.1.2 Weibull 分布拟合 (MLE)
 假设概率密度函数 (PDF) 为：
 $$
 f(t; k, \lambda) = \frac{k}{\lambda} \left(\frac{t}{\lambda}\right)^{k-1} e^{-(t/\lambda)^k}, \quad t \ge 0
@@ -109,13 +136,13 @@ $$
 $$
 *注：工程实现中使用 `scipy.stats.weibull_min.fit`。*
 
-#### 3.1.3 备选模型：指数分布 (Exponential Distribution)
+#### 4.1.3 备选模型：指数分布 (Exponential Distribution)
 若 Weibull 拟合失败或数据稀疏，退化为指数分布（无记忆性假设）：
 $$
 f(t; \lambda) = \lambda e^{-\lambda t}
 $$
 
-#### 3.1.4 活跃概率预测 (Prediction)
+#### 4.1.4 活跃概率预测 (Prediction)
 计算在未来 $\tau$ 天内（例如 $\tau=30$）再次活跃的累积概率 (CDF)：
 $$
 P(Active \le \tau) = F(\tau) = \int_{0}^{\tau} f(t) \, dt = 1 - e^{-(\tau/\hat{\lambda})^{\hat{k}}}
@@ -128,12 +155,31 @@ $$
 
 ---
 
-### 3.2 技术倾向性建模 (Technical Tendency Modeling)
+### 4.2 技术倾向性建模 (Technical Tendency Modeling)
 
 目标是估计开发者在特定技术领域 $T_k$ 的投入概率 $P(T_k)$。
 
-#### 3.2.1 贝叶斯平滑估计 (Bayesian Smoothing)
-基于多项分布假设，使用拉普拉斯平滑 (Laplace Smoothing) 计算后验概率，以解决小样本下的零概率问题：
+#### 4.2.1 话题权重构造 (Topic Weighting)
+为避免当每个话题仅在一个仓库中出现时概率过于均匀的状况，我们在统计 $n_k$ 前为仓库级话题引入“影响力权重”，结合仓库星标与用户在该仓库的提交次数：
+
+$$
+w_r = \max\big(1,\; \lfloor\log(1+\text{stars}_r)\rfloor + \lfloor\log(1+\text{commits}_r)\rfloor\big)
+$$
+
+其中：
+- $\text{stars}_r$: 仓库 $r$ 的 `stargazers_count`。
+- $\text{commits}_r$: 目标用户在仓库 $r$ 于 $W_{obs}$ 窗口中的提交条数，来源于 `github_client.get_user_commit_activity`。
+
+据此，针对话题 $T_k$ 的加权计数为：
+
+$$
+n_k = \sum_{r\in\mathcal{R}} \big(\mathbb{1}[T_k\in r.\text{topics}] \cdot w_r\big)
+$$
+
+该设计使得热门仓库与用户高投入仓库对对应话题的贡献更大，从而拉开概率差异。
+
+#### 4.2.2 贝叶斯平滑估计 (Bayesian Smoothing)
+在得到加权计数 $n_k$ 后，基于多项分布假设，使用拉普拉斯平滑 (Laplace Smoothing) 计算后验概率，以解决小样本下的零概率问题：
 
 $$
 P_{user}(T_k) = \frac{n_k + \alpha}{N_{total} + \alpha \cdot K}
@@ -145,7 +191,7 @@ $$
 *   $K$: 唯一技术标签的总数。
 *   $\alpha = 1$: 平滑系数。
 
-#### 3.2.2 冷启动加权融合 (Cold Start Weighted Fusion)
+#### 4.2.3 冷启动加权融合 (Cold Start Weighted Fusion)
 当用户项目数 $N_{proj}$ 较少时，用户自身的统计数据具有高方差。此时引入社区先验分布 $P_{community}$ 进行融合。
 
 **步骤 1: 计算置信度权重 $w$**
@@ -161,9 +207,11 @@ P_{final}(T_k) = w \cdot P_{user}(T_k) + (1 - w) \cdot P_{community}(T_k)
 $$
 其中 $P_{community}$ 根据开发者的推测类型（如 "Backend", "AI/ML"）选取预置的先验分布。
 
+备注：若目标用户近一年内不存在任何真实话题（未设置 `topics`），则前端仅展示语言分布，并在“技术倾向预测”区块提示“暂无Topic倾向数据”。引力图亦回退为语言关系图。
+
 ---
 
-### 3.3 综合匹配度打分 (Comprehensive Match Scoring)
+### 4.3 综合匹配度打分 (Comprehensive Match Scoring)
 
 目标是量化开发者与特定技术栈 $Target$ 的契合程度。
 

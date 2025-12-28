@@ -3,7 +3,23 @@ export const algorithmDoc = `
 
 本文档详细阐述 DevScope 项目中的核心算法理论，包括输入变量的数学定义、模型参数设定以及具体的计算路径。所有数学公式均采用 LaTeX 格式书写，以确保严谨性。
 
-## 1. 符号定义与参数表 (Symbol Definitions and Parameters)
+## 1. OpenRank 计算原理与系统实现 (Core Requirement)
+
+OpenRank 是面向开源生态的影响力评分，基于协作网络的传播模型（类似 PageRank）。每个节点的得分会从其入边累积并按出边分摊，平衡由阻尼因子控制：
+
+$$
+\\operatorname{extOpenRank}(v) = \\alpha \\sum_{u \\in \\operatorname{in}(v)} \\frac{\\operatorname{OpenRank}(u)}{\\operatorname{out}(u)} + (1-\\alpha) \\cdot \\text{base}
+$$
+
+- 节点：开发者、仓库、Issue、PR 等。
+- 边权：Commit、Review、Issue/PR 互动等贡献行为的加权。
+- 阻尼因子 $\\alpha$：常取 0.85，用于防止循环放大并引入基础分布。
+- 时间衰减：近期行为权重更高（由官方离线计算体现）。
+
+本项目仅从 OpenDigger 官方 API 拉取已计算的年度 OpenRank，不在本地重算。仅选择 JSON 中最新年份键（形如 "YYYY"）的值，失败返回 N/A。代码见 
+\`backend/opendigger_client.py\` 的 \`get_user_openrank\` 与 \`get_repo_openrank\`。
+
+## 2. 符号定义与参数表 (Symbol Definitions and Parameters)
 
 ### 1.1 变量符号定义 (Variable Symbols)
 
@@ -40,7 +56,7 @@ export const algorithmDoc = `
 
 ---
 
-## 2. 输入变量详解 (Input Variables Detail)
+## 3. 输入变量详解 (Input Variables Detail)
 
 本系统的输入变量 $X$ 由两部分组成：$X = \\{D_{github}, D_{od}\\}$。
 
@@ -82,20 +98,20 @@ export const algorithmDoc = `
 
 ---
 
-## 3. 计算路径与数学模型 (Calculation Path and Mathematical Models)
+## 4. 计算路径与数学模型 (Calculation Path and Mathematical Models)
 
-### 3.1 活跃时间分布建模 (Activity Time Distribution Modeling)
+### 4.1 活跃时间分布建模 (Activity Time Distribution Modeling)
 
 目标是预测开发者下一次活跃的时间概率。我们假设开发者的活跃间隔服从 **Weibull 分布**。
 
-#### 3.1.1 间隔序列生成
+#### 4.1.1 间隔序列生成
 首先计算相邻提交的时间间隔序列 $\\Delta T$：
 $$
 \\Delta T = \\{\\Delta t_i \\mid \\Delta t_i = t_{i+1} - t_i, \\quad 1 \\le i < m\\}
 $$
 单位通常转换为 **天 (Days)**。
 
-#### 3.1.2 Weibull 分布拟合 (MLE)
+#### 4.1.2 Weibull 分布拟合 (MLE)
 假设概率密度函数 (PDF) 为：
 $$
 f(t; k, \\lambda) = \\frac{k}{\\lambda} \\left(\\frac{t}{\\lambda}\\right)^{k-1} e^{-(t/\\lambda)^k}, \\quad t \\ge 0
@@ -110,13 +126,13 @@ $$
 $$
 *注：工程实现中使用 \`scipy.stats.weibull_min.fit\`。*
 
-#### 3.1.3 备选模型：指数分布 (Exponential Distribution)
+#### 4.1.3 备选模型：指数分布 (Exponential Distribution)
 若 Weibull 拟合失败或数据稀疏，退化为指数分布（无记忆性假设）：
 $$
 f(t; \\lambda) = \\lambda e^{-\\lambda t}
 $$
 
-#### 3.1.4 活跃概率预测 (Prediction)
+#### 4.1.4 活跃概率预测 (Prediction)
 计算在未来 $\\tau$ 天内（例如 $\\tau=30$）再次活跃的累积概率 (CDF)：
 $$
 P(Active \\le \\tau) = F(\\tau) = \\int_{0}^{\\tau} f(t) \\, dt = 1 - e^{-(\\tau/\\hat{\\lambda})^{\\hat{k}}}
@@ -129,11 +145,11 @@ $$
 
 ---
 
-### 3.2 技术倾向性建模 (Technical Tendency Modeling)
+### 4.2 技术倾向性建模 (Technical Tendency Modeling)
 
 目标是估计开发者在特定技术领域 $T_k$ 的投入概率 $P(T_k)$。
 
-#### 3.2.1 贝叶斯平滑估计 (Bayesian Smoothing)
+#### 4.2.1 贝叶斯平滑估计 (Bayesian Smoothing)
 基于多项分布假设，使用拉普拉斯平滑 (Laplace Smoothing) 计算后验概率，以解决小样本下的零概率问题：
 
 $$
@@ -146,7 +162,7 @@ $$
 *   $K$: 唯一技术标签的总数。
 *   $\\alpha = 1$: 平滑系数。
 
-#### 3.2.2 冷启动加权融合 (Cold Start Weighted Fusion)
+#### 4.2.2 冷启动加权融合 (Cold Start Weighted Fusion)
 当用户项目数 $N_{proj}$ 较少时，用户自身的统计数据具有高方差。此时引入社区先验分布 $P_{community}$ 进行融合。
 
 **步骤 1: 计算置信度权重 $w$**
@@ -164,20 +180,20 @@ $$
 
 ---
 
-### 3.3 综合匹配度打分 (Comprehensive Match Scoring)
+### 4.3 综合匹配度打分 (Comprehensive Match Scoring)
 
 目标是量化开发者与特定技术栈 $Target$ 的契合程度。
 
-#### 3.3.1 评分公式
+#### 4.3.1 评分公式
 $$
 S_{match} = \\beta_{tech} \\cdot P_{final}(Target) + \\beta_{active} \\cdot P(Active \\le 30)
 $$
 
-#### 3.3.2 解释
+#### 4.3.2 解释
 *   **技术契合度 ($\\beta_{tech} \\cdot P_{final}$)**: 反映开发者在历史上使用该技术的频率及倾向。
 *   **活跃度贡献 ($\\beta_{active} \\cdot P(Active)$)**: 反映开发者近期的活跃状态。即使技术栈完全匹配，如果开发者已停止活跃，总分也会受到惩罚。
 
-#### 3.3.3 评分等级映射
+#### 4.3.3 评分等级映射
 $$
 \\text{Level} = \\begin{cases} 
 \\text{极高匹配 (Excellent)} & S_{match} \\ge 0.8 \\\\

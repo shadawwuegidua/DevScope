@@ -21,7 +21,7 @@
       </button>
     </div>
 
-    <DocModal :is-open="showDocs" @close="showDocs = false" />
+    <DocModal :is-open="showDocs" pdf-url="/docs/Phase2/DATA_ALGORITHM_THEORY.pdf" @close="showDocs = false" />
 
     <!-- 加载状态 -->
     <div v-if="loading" class="loading">
@@ -50,6 +50,12 @@
         <div class="profile-info">
           <h2>{{ analysisData.persona.name || analysisData.username }}</h2>
           <p v-if="analysisData.persona.bio" class="bio">{{ analysisData.persona.bio }}</p>
+          <p
+            v-if="analysisData.persona && (analysisData.persona as any).openrank !== undefined && (analysisData.persona as any).openrank !== null"
+            class="openrank-line"
+          >
+            <strong>OpenRank: {{ Number((analysisData.persona as any).openrank).toFixed(2) }}</strong>
+          </p>
           <div class="stats">
             <span>仓库: {{ analysisData.persona.public_repos }}</span>
             <span>关注者: {{ analysisData.persona.followers }}</span>
@@ -80,7 +86,35 @@
       <!-- 技术倾向柱状图 -->
       <div class="chart-section">
         <h3>技术倾向预测</h3>
-        <div ref="tendencyChartRef" class="chart"></div>
+        <div v-if="analysisData?.topic_tendency && analysisData.topic_tendency.length > 0">
+          <div ref="topicChartRef" class="chart"></div>
+        </div>
+        <p v-else class="chart-subtitle">暂无Topic倾向数据</p>
+        <div ref="languageChartRef" class="chart"></div>
+
+        <!-- 近期贡献的 Topic / 语言 / 仓库 / OpenRank -->
+        <div class="recent-topic-list">
+          <h4>近期贡献映射</h4>
+          <div v-if="analysisData.recent_topic_contributions && analysisData.recent_topic_contributions.length > 0">
+            <div class="recent-topic-row recent-topic-header">
+              <span>Topic</span>
+              <span>语言</span>
+              <span>仓库</span>
+              <span>OpenRank</span>
+            </div>
+            <div
+              v-for="(item, idx) in analysisData.recent_topic_contributions"
+              :key="idx"
+              class="recent-topic-row"
+            >
+              <span class="topic-label">{{ item.topic || 'Unspecified' }}</span>
+              <span>{{ item.language || 'N/A' }}</span>
+              <a :href="item.repo_url" target="_blank" rel="noreferrer" class="repo-link">{{ item.repo }}</a>
+              <span><strong>{{ item.repo_openrank !== null && item.repo_openrank !== undefined ? item.repo_openrank.toFixed(2) : 'N/A' }}</strong></span>
+            </div>
+          </div>
+          <p v-else class="chart-subtitle">暂无近期贡献映射数据</p>
+        </div>
       </div>
 
       <!-- 技术关系引力图 -->
@@ -98,6 +132,48 @@
           点击技术: <strong>{{ selectedTech.category }}</strong> 
           (概率: {{ (selectedTech.probability * 100).toFixed(1) }}%)
         </p>
+      </div>
+
+      <!-- 综合匹配度打分 -->
+      <div class="chart-section">
+        <h3>综合匹配度打分</h3>
+        <div class="match-inputs">
+          <input
+            v-model="matchLocatorInput"
+            type="text"
+            placeholder="定位技术（输入名称，自动滚动到对应项）"
+            class="search-input"
+            :disabled="loading || isRequesting"
+            @keyup.enter="locateMatchItem"
+          />
+          <button @click="locateMatchItem" :disabled="loading || isRequesting || !analysisData" class="search-btn">
+            定位
+          </button>
+        </div>
+        <p class="chart-subtitle">匹配度基于技术倾向与未来30天活跃概率综合计算</p>
+
+        <div v-if="Object.keys(matchResults).length > 0">
+          <div ref="matchChartRef" class="chart"></div>
+          <div class="match-controls" v-if="Object.keys(matchResults).length > matchLimit">
+            <button class="expand-btn" @click="matchExpanded = !matchExpanded">
+              {{ matchExpanded ? '收起' : `展开全部 (共 ${Object.keys(matchResults).length} 项)` }}
+            </button>
+          </div>
+          <div class="match-list">
+            <div v-for="([tech, item], idx) in displayedMatches" :key="tech" :class="['match-item', { highlight: isTechHighlighted(tech) }]" :id="sanitizeTechId(tech)">
+              <div class="match-header">
+                <span class="tech-name">{{ tech }}</span>
+                <span class="match-score">综合分: {{ (item.score * 100).toFixed(1) }}%</span>
+              </div>
+              <div class="match-detail">
+                <span>技术倾向: {{ (item.tech_prob * 100).toFixed(1) }}%</span>
+                <span>活跃概率(30d): {{ (item.active_prob * 100).toFixed(1) }}%</span>
+              </div>
+              <p class="match-explanation" v-if="item.explanation">{{ item.explanation }}</p>
+            </div>
+          </div>
+        </div>
+        <p v-else class="chart-subtitle">暂无匹配度数据。</p>
       </div>
 
       <!-- Next Commit Prediction -->
@@ -132,7 +208,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, nextTick } from 'vue'
+import { ref, watch, nextTick, computed } from 'vue'
 import { api } from './api'
 import * as echarts from 'echarts'
 import GravityGraph from './components/GravityGraph.vue'
@@ -173,8 +249,11 @@ type AnalysisData = {
     followers: number
     following: number
     created_at?: string
+    openrank?: number | null
   }
   tech_tendency: TechItem[]
+  topic_tendency: TechItem[]
+  language_tendency: TechItem[]
   next_commit_prediction?: NextCommitPrediction
   time_prediction?: {
     expected_interval_days: number
@@ -185,6 +264,13 @@ type AnalysisData = {
   cold_start_note?: string
   recent_commits: CommitInfo[]
   contribution_calendar: string[]
+  recent_topic_contributions: {
+    topic: string
+    language?: string | null
+    repo: string
+    repo_url: string
+    repo_openrank?: number | null
+  }[]
 }
 
 const username = ref('')
@@ -192,10 +278,34 @@ const loading = ref(false)
 const error = ref('')
 const showDocs = ref(false)
 const analysisData = ref<AnalysisData | null>(null)
-const tendencyChartRef = ref<HTMLDivElement>()
+const topicChartRef = ref<HTMLDivElement>()
+const languageChartRef = ref<HTMLDivElement>()
+const matchChartRef = ref<HTMLDivElement>()
 const selectedTech = ref<TechItem | null>(null)
 
-let tendencyChart: echarts.ECharts | null = null
+let topicChart: echarts.ECharts | null = null
+let languageChart: echarts.ECharts | null = null
+let matchChart: echarts.ECharts | null = null
+
+// 综合匹配度：定位输入与结果（自动计算）
+const matchLocatorInput = ref('')
+const matchResults = ref<Record<string, { score: number; explanation?: string; tech_prob: number; active_prob: number }>>({})
+const matchExpanded = ref(false)
+const matchLimit = 10
+const matchKeywords = computed(() => (
+  (matchLocatorInput.value || '')
+    .split(/[\s,]+/)
+    .map(s => s.trim().toLowerCase())
+    .filter(s => s.length > 0)
+))
+const isTechHighlighted = (tech: string) => {
+  const t = (tech || '').toLowerCase()
+  return matchKeywords.value.some(k => t.includes(k))
+}
+const displayedMatches = computed(() => {
+  const entries = Object.entries(matchResults.value)
+  return matchExpanded.value ? entries : entries.slice(0, matchLimit)
+})
 
 // 防止重复请求
 let isRequesting = false
@@ -242,7 +352,7 @@ async function fetchAnalysis() {
     await nextTick()
     // 再次等待确保DOM完全渲染
     await new Promise(resolve => setTimeout(resolve, 100))
-    renderTendencyChart()
+    renderCharts()
   } catch (err: any) {
     console.error('分析失败:', err)
     
@@ -282,62 +392,78 @@ function reset() {
   isRequesting = false
   
   // 清理图表
-  if (tendencyChart) {
-    const resizeHandler = (tendencyChart as any)?._resizeHandler
+  if (topicChart) {
+    const resizeHandler = (topicChart as any)?._resizeHandler
     if (resizeHandler) {
       window.removeEventListener('resize', resizeHandler)
     }
-    tendencyChart.dispose()
-    tendencyChart = null
+    topicChart.dispose()
+    topicChart = null
   }
+  if (languageChart) {
+    const resizeHandler = (languageChart as any)?._resizeHandler
+    if (resizeHandler) {
+      window.removeEventListener('resize', resizeHandler)
+    }
+    languageChart.dispose()
+    languageChart = null
+  }
+  if (matchChart) {
+    const resizeHandler = (matchChart as any)?._resizeHandler
+    if (resizeHandler) {
+      window.removeEventListener('resize', resizeHandler)
+    }
+    matchChart.dispose()
+    matchChart = null
+  }
+  matchResults.value = {}
 }
 
-function renderTendencyChart() {
-  console.log('开始渲染技术倾向图表')
-  console.log('tendencyChartRef.value:', tendencyChartRef.value)
-  console.log('analysisData.value:', analysisData.value)
-  
-  if (!tendencyChartRef.value || !analysisData.value) {
-    console.warn('图表容器或数据不存在，无法渲染')
-    return
+function renderBarChart(
+  chartRef: HTMLDivElement | undefined,
+  dataSource: TechItem[] | undefined,
+  titleWhenEmpty: string,
+  currentChart: echarts.ECharts | null,
+  axisBold: boolean = false
+): echarts.ECharts | null {
+  if (!chartRef) {
+    console.warn('图表容器不存在')
+    return null
   }
 
-  // 如果图表已存在，先销毁
-  if (tendencyChart) {
-    tendencyChart.dispose()
-    tendencyChart = null
+  if (currentChart) {
+    const resizeHandler = (currentChart as any)?._resizeHandler
+    if (resizeHandler) {
+      window.removeEventListener('resize', resizeHandler)
+    }
+    currentChart.dispose()
+    currentChart = null
   }
 
-  tendencyChart = echarts.init(tendencyChartRef.value)
-  console.log('ECharts实例已创建')
-  
-  // 确保数据存在
-  if (!analysisData.value.tech_tendency || analysisData.value.tech_tendency.length === 0) {
-    console.warn('技术倾向数据为空')
-    tendencyChart.setOption({
+  const chart = echarts.init(chartRef)
+
+  if (!dataSource || dataSource.length === 0) {
+    chart.setOption({
       title: {
-        text: '暂无技术倾向数据',
+        text: titleWhenEmpty,
         left: 'center',
         top: 'center',
         textStyle: { color: '#999' }
       }
     })
-    return
+    return chart
   }
 
-  console.log('技术倾向数据:', analysisData.value.tech_tendency)
-  const data = analysisData.value.tech_tendency.map(t => ({
+  const data = dataSource.map(t => ({
     name: t.category,
     value: t.probability * 100
   }))
-  console.log('处理后的图表数据:', data)
 
   const option: echarts.EChartsOption = {
     tooltip: {
       trigger: 'axis',
       axisPointer: { type: 'shadow' },
       formatter: (params: any) => {
-        // 保留两位小数
         if (Array.isArray(params)) {
           const p = params[0]
           return `${p.name}: ${Number(p.value).toFixed(2)}%`
@@ -354,7 +480,7 @@ function renderTendencyChart() {
     xAxis: {
       type: 'category',
       data: data.map(d => d.name),
-      axisLabel: { rotate: 45, interval: 0 }
+      axisLabel: { rotate: 45, interval: 0, fontWeight: axisBold ? 'bold' : 'normal' }
     },
     yAxis: {
       type: 'value',
@@ -377,20 +503,37 @@ function renderTendencyChart() {
     }]
   }
 
-  tendencyChart.setOption(option)
-  console.log('图表配置已应用')
-  
-  // 监听窗口大小变化
+  chart.setOption(option)
+
   const resizeHandler = () => {
-    tendencyChart?.resize()
+    chart?.resize()
   }
   window.addEventListener('resize', resizeHandler)
-  
-  // 在组件卸载时移除监听器
-  if (tendencyChart) {
-    // 存储resize handler以便后续清理
-    ;(tendencyChart as any)._resizeHandler = resizeHandler
-  }
+  ;(chart as any)._resizeHandler = resizeHandler
+  return chart
+}
+
+function renderCharts() {
+  if (!analysisData.value) return
+  topicChart = renderBarChart(
+    topicChartRef.value,
+    (analysisData.value.topic_tendency && analysisData.value.topic_tendency.length > 0)
+      ? analysisData.value.topic_tendency
+      : (analysisData.value.tech_tendency || analysisData.value.language_tendency),
+    '暂无 Topic 倾向数据',
+    topicChart,
+    true
+  )
+  languageChart = renderBarChart(
+    languageChartRef.value,
+    analysisData.value.language_tendency,
+    '暂无语言倾向数据',
+    languageChart,
+    false
+  )
+  // 若已有匹配结果，刷新匹配度图
+  computeMatchResults()
+  renderMatchChart()
 }
 
 function handleNodeClick(payload: { category: string; probability: number }) {
@@ -407,11 +550,87 @@ watch(analysisData, (newVal) => {
     nextTick(() => {
       // 确保DOM完全渲染后再渲染图表
       setTimeout(() => {
-        renderTendencyChart()
+        renderCharts()
       }, 200)
     })
+    // 切换用户时清空此前匹配结果，避免误展示
+    matchResults.value = {}
   }
 }, { deep: true })
+
+function computeMatchResults() {
+  if (!analysisData.value) return
+  const techs = analysisData.value.tech_tendency || []
+  const activeProb = analysisData.value.time_prediction?.next_active_prob_30d ?? 0.5
+  const results: Record<string, { score: number; explanation?: string; tech_prob: number; active_prob: number }> = {}
+  for (const t of techs) {
+    const score = t.probability * 0.7 + activeProb * 0.3
+    results[t.category] = {
+      score,
+      tech_prob: t.probability,
+      active_prob: activeProb,
+      explanation: '综合分 = 技术倾向(70%) + 活跃概率(30%)'
+    }
+  }
+  // 排序：分数高到低
+  const sorted = Object.entries(results).sort((a, b) => b[1].score - a[1].score)
+  matchResults.value = Object.fromEntries(sorted)
+}
+
+function renderMatchChart() {
+  const items: TechItem[] = Object.entries(matchResults.value).map(([tech, info]) => ({
+    category: tech,
+    probability: info.score,
+    explanation: ''
+  }))
+  matchChart = renderBarChart(
+    matchChartRef.value,
+    items,
+    '暂无匹配度数据',
+    matchChart
+  )
+}
+
+function sanitizeTechId(tech: string) {
+  return 'match-' + tech.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-_]/g, '').toLowerCase()
+}
+
+function locateMatchItem() {
+  const q = (matchLocatorInput.value || '').toLowerCase().trim()
+  if (!q) return
+  const keys = Object.keys(matchResults.value)
+  const found = keys.find(k => k.toLowerCase().includes(q))
+  if (!found) return
+  
+  // 检查找到的tech是否在当前显示的列表中
+  const displayedKeys = displayedMatches.value.map(([tech]) => tech)
+  const isCurrentlyVisible = displayedKeys.includes(found)
+  
+  // 如果不在当前显示的列表中，先展开列表
+  if (!isCurrentlyVisible && !matchExpanded.value) {
+    matchExpanded.value = true
+    // 等待DOM更新后再滚动
+    nextTick(() => {
+      setTimeout(() => {
+        scrollToMatchItem(found)
+      }, 100)
+    })
+  } else {
+    scrollToMatchItem(found)
+  }
+}
+
+function scrollToMatchItem(tech: string) {
+  const id = sanitizeTechId(tech)
+  // 等待一下确保DOM已更新
+  setTimeout(() => {
+    const el = document.getElementById(id)
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      // 高亮效果通过 isTechHighlighted 函数自动应用（基于 matchLocatorInput）
+    }
+  }, 50)
+}
 </script>
 
 <style scoped>
@@ -573,6 +792,11 @@ watch(analysisData, (newVal) => {
   font-size: 0.9rem;
 }
 
+.openrank-line {
+  margin: 0.25rem 0 0.75rem;
+  color: #2d3748;
+}
+
 .cold-start-note {
   margin-top: 1rem;
   padding: 0.75rem;
@@ -589,6 +813,49 @@ watch(analysisData, (newVal) => {
 .chart-section h3 {
   margin-bottom: 1rem;
   color: #2d3748;
+}
+
+.chart-subtitle {
+  margin: 0.25rem 0 0.75rem;
+  color: #4a5568;
+  font-size: 0.95rem;
+}
+
+.recent-topic-list {
+  margin-top: 1rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+}
+.recent-topic-list h4 {
+  margin: 0 0 0.75rem;
+  color: #2d3748;
+}
+.recent-topic-row {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1.6fr 0.7fr;
+  gap: 0.75rem;
+  padding: 0.5rem 0;
+  align-items: center;
+  border-top: 1px solid #e2e8f0;
+}
+.recent-topic-header {
+  font-weight: 700;
+  color: #4a5568;
+  border-top: none;
+}
+.topic-label {
+  font-weight: 600;
+  color: #2d3748;
+}
+.repo-link {
+  color: #2b6cb0;
+  text-decoration: none;
+  font-weight: 600;
+}
+.repo-link:hover {
+  text-decoration: underline;
 }
 
 .chart {
@@ -640,6 +907,92 @@ watch(analysisData, (newVal) => {
 .repo-name {
   font-weight: bold;
   color: #4a5568;
+}
+
+/* 匹配度列表样式优化 */
+.match-inputs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  align-items: center;
+}
+.match-inputs .search-input {
+  flex: 1;
+  max-width: 400px;
+}
+.match-inputs .search-btn {
+  padding: 1rem 1.5rem;
+  white-space: nowrap;
+}
+.match-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+.match-item {
+  padding: 1rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: #fff;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+.match-item.highlight {
+  background: #ebf8ff;
+  border-color: #3182ce;
+  box-shadow: 0 0 0 2px rgba(49, 130, 206, 0.2);
+}
+.match-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+.tech-name {
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: #2d3748;
+}
+.match-score {
+  font-weight: 600;
+  color: #667eea;
+  font-size: 1rem;
+}
+.match-detail {
+  display: flex;
+  gap: 1.5rem;
+  font-size: 0.9rem;
+  color: #718096;
+  margin-bottom: 0.5rem;
+}
+.match-explanation {
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  color: #4a5568;
+  font-style: italic;
+}
+.match-controls {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+}
+.expand-btn {
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #2b6cb0;
+  background: #ebf8ff;
+  border: 1px solid #bee3f8;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.expand-btn:hover {
+  background: #dbeafe;
+  border-color: #90cdf4;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .commit-message a {
