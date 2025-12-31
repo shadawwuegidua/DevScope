@@ -125,6 +125,4 @@ LLM_API_KEY=your_ecnu_api_key_here
    ```
    重新启动后端后生效。
 
-## 相关文档
-- Phase 4 前端快速参考：`docs/Phase4/PHASE4_FRONTEND_QUICK_REFERENCE.md`
-- 项目安全规范：`SECURITY.md`
+
