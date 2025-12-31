@@ -21,6 +21,7 @@ DevScope Phase 3 - 后端 API 服务 (FastAPI)
 """
 
 from typing import Dict, List, Optional, Any
+import math
 from datetime import datetime, timedelta
 import json
 import logging
@@ -38,6 +39,12 @@ from pydantic import BaseModel, Field
 from github_client import GitHubClient
 import modeling
 from llm_service import predict_next_commit, NextCommitPrediction
+from opendigger_client import (
+    load_opendigger_json,
+    get_developer_metrics,
+    get_user_openrank,
+    get_repo_openrank,
+)
 
 # 配置日志
 logging.basicConfig(
@@ -83,6 +90,7 @@ class PersonaInfo(BaseModel):
     followers: int = Field(default=0, description="关注者数")
     following: int = Field(default=0, description="正在关注数")
     created_at: Optional[str] = Field(None, description="账户创建时间")
+    openrank: Optional[float] = Field(None, description="OpenRank 值")
 
 
 class CommitInfo(BaseModel):
@@ -91,6 +99,15 @@ class CommitInfo(BaseModel):
     repo_name: str = Field(..., description="仓库名称")
     date: str = Field(..., description="提交日期")
     url: str = Field(..., description="提交链接")
+
+
+class RecentTopicContribution(BaseModel):
+    """近期贡献的 Topic 与仓库映射"""
+    topic: str = Field(..., description="推断的 Topic 或标签")
+    language: Optional[str] = Field(None, description="仓库主要语言")
+    repo: str = Field(..., description="仓库全名 owner/repo")
+    repo_url: str = Field(..., description="仓库链接")
+    repo_openrank: Optional[float] = Field(None, description="仓库 OpenRank")
 
 
 class DeveloperAnalysis(BaseModel):
@@ -107,6 +124,14 @@ class DeveloperAnalysis(BaseModel):
         default_factory=list,
         description="技术倾向预测列表（按概率降序）"
     )
+    topic_tendency: List[PredictionResult] = Field(
+        default_factory=list,
+        description="Topic 倾向预测列表（按概率降序，优先用于展示）"
+    )
+    language_tendency: List[PredictionResult] = Field(
+        default_factory=list,
+        description="编程语言倾向预测列表（按概率降序，作为辅助信息）"
+    )
     time_prediction: Optional[TimePrediction] = Field(
         None,
         description="活跃时间预测（项目数<5 时为 None）"
@@ -118,6 +143,10 @@ class DeveloperAnalysis(BaseModel):
     contribution_calendar: List[str] = Field(
         default_factory=list,
         description="过去一年的提交日期列表"
+    )
+    recent_topic_contributions: List[RecentTopicContribution] = Field(
+        default_factory=list,
+        description="近期贡献的 Topic/语言/仓库及仓库 OpenRank"
     )
     match_scores: Optional[Dict[str, Dict[str, Any]]] = Field(
         None,
@@ -198,21 +227,59 @@ def _extract_primary_language(repos: List[Dict]) -> Optional[str]:
     return Counter(languages).most_common(1)[0][0]
 
 
+def _extract_languages(repos: List[Dict]) -> List[str]:
+    """返回仓库语言列表（过滤 None）。"""
+    return [r.get("language") for r in repos if r.get("language")]
+
+
 def _extract_repo_topics(repos: List[Dict]) -> List[str]:
     """
-    从仓库列表中提取所有话题/语言。
-    
-    优先使用仓库的语言字段，次选话题标签。
+    从仓库列表中提取所有话题（Topic）。不做语言兜底，保持 Topic 的纯粹性。
     """
     topics = []
     for repo in repos:
-        # 首先尝试获取编程语言
-        if repo.get("language"):
-            topics.append(repo["language"])
-        # 其次获取仓库的话题标签
-        if repo.get("topics"):
-            topics.extend(repo["topics"])
+        repo_topics = repo.get("topics") or []
+        if repo_topics:
+            topics.extend(repo_topics)
     return topics
+
+
+def _extract_repo_topics_weighted(repos: List[Dict], commit_counts_by_repo: Optional[Dict[str, int]] = None) -> List[str]:
+    """根据仓库星标数对 topics 加权，降低均匀概率的出现。
+
+    权重方案：
+    - 星标权重：ws = int(log1p(stargazers_count))
+    - 提交权重：wc = int(log1p(user_commits_in_repo))（若提供）
+    - 总权重：weight = max(1, ws + wc)
+    例如：stars=100→ws=4；commits=50→wc=3；则 weight=7。
+    """
+    weighted: List[str] = []
+    for repo in repos:
+        repo_topics = repo.get("topics") or []
+        if not repo_topics:
+            continue
+        stars = 0
+        try:
+            stars = int(repo.get("stargazers_count") or 0)
+        except Exception:
+            stars = 0
+        ws = int(math.log1p(stars))
+        wc = 0
+        # 提交权重按 full_name 命中
+        if commit_counts_by_repo:
+            key = repo.get("full_name") or (
+                f"{repo.get('owner', {}).get('login', '')}/{repo.get('name', '')}"
+            )
+            try:
+                commits_in_repo = int(commit_counts_by_repo.get(key, 0))
+                wc = int(math.log1p(commits_in_repo))
+            except Exception:
+                wc = 0
+        weight = max(1, ws + wc)
+        for t in repo_topics:
+            # 重复追加以实现加权计数
+            weighted.extend([t] * weight)
+    return weighted
 
 
 def _sort_predictions_by_probability(
@@ -284,7 +351,8 @@ async def analyze_developer(
         
         # Step 2: 获取用户仓库列表
         logger.info(f"开始获取仓库列表: {username}")
-        repos = github_client.get_repos(username)
+        # 合并拥有与参与贡献的仓库
+        repos = github_client.get_user_repos_union(username)
         logger.info(f"仓库列表获取成功: {len(repos)} 个仓库")
         
         if not repos:
@@ -294,24 +362,79 @@ async def analyze_developer(
                 detail=f"用户 {username} 没有公开仓库"
             )
         
-        # Step 3: 提取关键数据
+        # Step 3: 提取关键数据（先取语言与主要语言，Topic 将在提交统计后加权计算）
         project_count = len(repos)
         primary_language = _extract_primary_language(repos)
-        repo_topics = _extract_repo_topics(repos)
-        logger.info(f"提取数据: 项目数={project_count}, 主要语言={primary_language}")
+        repo_languages = _extract_languages(repos)
+        logger.info(
+            f"提取数据: 项目数={project_count}, 主要语言={primary_language}, languages={len(repo_languages)}"
+        )
         
-        # Step 4: 获取提交历史（用于时间分布拟合）
+        # Step 4: 获取提交历史（用于时间分布拟合），已基于并集仓库
         logger.info(f"开始获取提交历史: {username}")
         commit_activity = github_client.get_user_commit_activity(
             username, limit_repos=min(20, project_count)
         )
         commit_times = commit_activity.get("commit_times", [])
         recent_commits_data = commit_activity.get("recent_commits", [])
+        commit_counts_by_repo = commit_activity.get("commit_counts_by_repo", {})
         logger.info(f"提交历史获取成功: {len(commit_times)} 条提交记录")
+
+        # 基于星标与提交次数加权计算 Topic 列表
+        repo_topics = _extract_repo_topics_weighted(repos, commit_counts_by_repo)
+        logger.info(f"加权 Topic 计算完成: topics={len(repo_topics)}")
+
+        # Step 3.1: 组装“近期贡献的 Topic/语言/仓库/OpenRank”列表（按最近有提交的仓库排序）
+        recent_topic_contributions: List[RecentTopicContribution] = []
+        try:
+            sorted_repos_by_commit = sorted(
+                commit_counts_by_repo.items(), key=lambda x: x[1], reverse=True
+            )
+            for repo_full, _ in sorted_repos_by_commit[:5]:  # 取前 5 个最近活跃仓库
+                owner, name = repo_full.split("/", 1)
+                repo_meta = next(
+                    (
+                        r
+                        for r in repos
+                        if (r.get("full_name") == repo_full)
+                        or (
+                            r.get("name") == name
+                            and r.get("owner", {}).get("login") == owner
+                        )
+                    ),
+                    {},
+                )
+                topics = repo_meta.get("topics") or []
+                topic = topics[0] if topics else (repo_meta.get("language") or "Unspecified")
+                language = repo_meta.get("language")
+                repo_url = repo_meta.get("html_url") or f"https://github.com/{repo_full}"
+
+                repo_openrank = None
+                try:
+                    repo_openrank = get_repo_openrank(owner, name, timeout=8)
+                except Exception as e:
+                    logger.warning(f"仓库 OpenRank 获取失败 {repo_full}: {e}")
+
+                recent_topic_contributions.append(
+                    RecentTopicContribution(
+                        topic=topic or "Unspecified",
+                        language=language,
+                        repo=repo_full,
+                        repo_url=repo_url,
+                        repo_openrank=repo_openrank,
+                    )
+                )
+        except Exception as e:
+            logger.warning(f"构建近期贡献列表失败: {e}")
         
-        # Step 4.1: LLM 预测下一次提交
+        # Step 4.1: LLM 预测下一次提交（失败时返回 None，不影响主流程）
         commit_messages = [c.get("message", "") for c in recent_commits_data]
-        next_commit_pred = await predict_next_commit(commit_messages)
+        next_commit_pred = None
+        try:
+            next_commit_pred = await predict_next_commit(commit_messages)
+        except Exception as e:
+            logger.warning(f"LLM 预测失败，继续处理: {e}")
+            next_commit_pred = None
         
         # Step 5: 冷启动检测和数据融合
         is_cold = modeling.is_cold_start(project_count)
@@ -332,8 +455,15 @@ async def analyze_developer(
         
         # Step 7: 计算技术倾向概率
         # 使用 modeling.calculate_topic_probability（含拉普拉斯平滑）
-        tech_tendency = modeling.calculate_topic_probability(
-            topics=repo_topics if repo_topics else [primary_language] if primary_language else [],
+        topic_probs = modeling.calculate_topic_probability(
+            topics=repo_topics if repo_topics else [],
+            alpha=1.0,
+            community_average=community_tendency,
+            confidence_weight=confidence_weight
+        )
+
+        language_probs = modeling.calculate_topic_probability(
+            topics=repo_languages if repo_languages else ([primary_language] if primary_language else []),
             alpha=1.0,
             community_average=community_tendency,
             confidence_weight=confidence_weight
@@ -352,6 +482,16 @@ async def analyze_developer(
             time_prediction = None
         
         # Step 9: 构建响应对象
+        # 获取 OpenRank（从 OpenDigger 在线 API）
+        openrank_value = None
+        try:
+            openrank_value = get_user_openrank(username, timeout=10)
+            if openrank_value is not None:
+                logger.info(f"OpenRank 获取成功: {username} = {openrank_value}")
+            else:
+                logger.info(f"OpenRank 数据不存在: {username} (用户可能未被 OpenDigger 收录)")
+        except Exception as e:
+            logger.warning(f"OpenRank 获取失败: {e}")
         persona = PersonaInfo(
             username=username,
             name=user_info.get("name"),
@@ -363,15 +503,24 @@ async def analyze_developer(
             followers=user_info.get("followers", 0),
             following=user_info.get("following", 0),
             created_at=user_info.get("created_at"),
+            openrank=openrank_value,
         )
         
         # 转换技术倾向为预测结果列表
-        tech_predictions = _sort_predictions_by_probability(tech_tendency)
-        logger.info(f"技术倾向预测结果: {len(tech_predictions)} 项")
-        if tech_predictions:
-            logger.info(f"前3项技术倾向: {[(p.category, p.probability) for p in tech_predictions[:3]]}")
+        topic_predictions = _sort_predictions_by_probability(topic_probs)
+        language_predictions = _sort_predictions_by_probability(language_probs)
+        # 默认 tech_tendency 优先 Topic，若 Topic 为空则使用 Language 兜底，保持前端/引力图有数据
+        tech_predictions = topic_predictions if topic_predictions else language_predictions
+
+        logger.info(
+            f"技术倾向: topics={len(topic_predictions)}, languages={len(language_predictions)}"
+        )
+        if topic_predictions:
+            logger.info(
+                f"前3项Topic: {[(p.category, p.probability) for p in topic_predictions[:3]]}"
+            )
         else:
-            logger.warning(f"技术倾向预测结果为空！原始数据: {tech_tendency}")
+            logger.warning(f"Topic 倾向为空！原始数据: {topic_probs}")
         
         # 生成冷启动说明
         cold_start_note = None
@@ -391,12 +540,15 @@ async def analyze_developer(
             confidence_weight=confidence_weight,
             persona=persona,
             tech_tendency=tech_predictions,
+            topic_tendency=topic_predictions,
+            language_tendency=language_predictions,
             time_prediction=time_prediction,
             match_scores=None,  # 暂不返回，可通过 /api/match 单独获取
             primary_language=primary_language,
             cold_start_note=cold_start_note,
             recent_commits=[CommitInfo(**c) for c in recent_commits_data],
-            contribution_calendar=commit_times
+            contribution_calendar=commit_times,
+            recent_topic_contributions=recent_topic_contributions,
         )
         
     except HTTPException:
@@ -450,7 +602,7 @@ async def match_technology_stack(request: MatchRequest):
     try:
         # 获取开发者分析结果
         user_info = github_client.get_user(request.username)
-        repos = github_client.get_repos(request.username)
+        repos = github_client.get_user_repos_union(request.username)
         
         if not repos:
             raise HTTPException(
@@ -461,9 +613,12 @@ async def match_technology_stack(request: MatchRequest):
         # 提取数据
         project_count = len(repos)
         primary_language = _extract_primary_language(repos)
-        repo_topics = _extract_repo_topics(repos)
+        repo_languages = _extract_languages(repos)
         commit_activity = github_client.get_user_commit_activity(request.username)
         commit_times = commit_activity.get("commit_times", [])
+        commit_counts_by_repo = commit_activity.get("commit_counts_by_repo", {})
+        # 基于星标与提交次数加权计算 Topic 列表
+        repo_topics = _extract_repo_topics_weighted(repos, commit_counts_by_repo)
         
         # 计算技术倾向
         confidence_weight = modeling.calculate_confidence_weight(project_count)
@@ -477,14 +632,24 @@ async def match_technology_stack(request: MatchRequest):
         else:
             community_tendency = None
         
-        tech_tendency = modeling.calculate_topic_probability(
-            topics=repo_topics if repo_topics else [primary_language] if primary_language else [],
+        topic_probs = modeling.calculate_topic_probability(
+            topics=repo_topics if repo_topics else [],
             alpha=1.0,
             community_average=community_tendency,
             confidence_weight=confidence_weight
         )
+
+        language_probs = modeling.calculate_topic_probability(
+            topics=repo_languages if repo_languages else ([primary_language] if primary_language else []),
+            alpha=1.0,
+            community_average=community_tendency,
+            confidence_weight=confidence_weight
+        )
+
+        # Topic 优先的融合（相同 key 时 Topic 覆盖语言）
+        tech_tendency = {**language_probs, **topic_probs}
         
-        # 计算活跃概率
+        # 计算活跃概率（基于并集仓库的提交活动）
         if project_count >= 5 and commit_times:
             time_pred = modeling.fit_time_distribution(commit_times)
             active_prob_30d = time_pred["next_active_prob_30d"]

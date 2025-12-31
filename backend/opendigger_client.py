@@ -56,3 +56,94 @@ def get_developer_metrics(username: str, data: Any) -> Optional[Dict[str, Any]]:
             if item.get("username") == username or item.get("login") == username:
                 return item
     return None
+
+
+def get_user_openrank(username: str, timeout: int = 10) -> Optional[float]:
+    """从 OpenDigger 在线 API 获取指定用户的最新 OpenRank 值。
+
+    API 地址格式：
+    https://oss.x-lab.info/open_digger/github/{username}/openrank.json
+
+    返回数据格式示例：
+    {
+        "2023": 123.45,
+        "2024": 150.67,
+        "2024-01": 12.3,
+        "2024-02": 13.5,
+        ...
+    }
+
+    参数：
+        username: GitHub 用户名
+        timeout: 请求超时时间（秒）
+
+    返回值：
+        最新的年度 OpenRank 值（浮点数），如果获取失败或用户不存在则返回 None
+    """
+    url = f"https://oss.x-lab.info/open_digger/github/{username}/openrank.json"
+    
+    try:
+        resp = requests.get(url, timeout=timeout)
+        if resp.status_code == 404:
+            # 用户在 OpenDigger 数据库中不存在
+            return None
+        if resp.status_code >= 400:
+            return None
+        
+        data = resp.json()
+        if not isinstance(data, dict):
+            return None
+        
+        # 筛选出年度数据（格式为 "2023", "2024" 等）
+        year_values = {}
+        for key, value in data.items():
+            if isinstance(key, str) and key.isdigit() and len(key) == 4:
+                try:
+                    year_values[int(key)] = float(value)
+                except (ValueError, TypeError):
+                    continue
+        
+        if not year_values:
+            return None
+        
+        # 返回最新年份的 OpenRank 值
+        latest_year = max(year_values.keys())
+        return round(year_values[latest_year], 2)
+        
+    except requests.RequestException:
+        return None
+    except (ValueError, KeyError, TypeError):
+        return None
+
+
+def get_repo_openrank(owner: str, repo: str, timeout: int = 10) -> Optional[float]:
+    """从 OpenDigger 在线 API 获取指定仓库的最新 OpenRank 值。
+
+    API 地址格式：
+    https://oss.x-lab.info/open_digger/github/{owner}/{repo}/openrank.json
+
+    返回值：最新年度的 OpenRank（float）；若仓库未被收录或获取失败返回 None。
+    """
+    url = f"https://oss.x-lab.info/open_digger/github/{owner}/{repo}/openrank.json"
+    try:
+        resp = requests.get(url, timeout=timeout)
+        if resp.status_code == 404 or resp.status_code >= 400:
+            return None
+        data = resp.json()
+        if not isinstance(data, dict):
+            return None
+        year_values: Dict[int, float] = {}
+        for key, value in data.items():
+            if isinstance(key, str) and key.isdigit() and len(key) == 4:
+                try:
+                    year_values[int(key)] = float(value)
+                except (ValueError, TypeError):
+                    continue
+        if not year_values:
+            return None
+        latest_year = max(year_values.keys())
+        return round(year_values[latest_year], 2)
+    except requests.RequestException:
+        return None
+    except (ValueError, KeyError, TypeError):
+        return None

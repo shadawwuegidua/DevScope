@@ -41,9 +41,18 @@ async def predict_next_commit(commit_messages: List[str]) -> Optional[NextCommit
     # Limit to last 10 commits to avoid token limits and focus on recent activity
     recent_commits = commit_messages[:10]
     
+    # 构建包含实际 commit messages 的 prompt
+    commits_text = "\n".join([f"- {msg}" for msg in recent_commits if msg.strip()])
+    if not commits_text:
+        logger.info("No valid commit messages for prediction.")
+        return None
+    
     prompt = f"""
-System: 你是一个代码行为分析专家。请根据给定的 git commit 历史，预测该开发者下一次提交可能涉及的内容。使用中文输出，明确指出下一次提交可能是什么项目或者技术相关的内容，给出做出该预测的理由。
-Input: {json.dumps(recent_commits)}
+System: 你是一个代码行为分析专家。请根据给定的 git commit 历史，预测该开发者下一次提交可能涉及的内容。使用中文输出，必须指出可能是与什么topic，repository相关的内容。
+
+Recent Commit Messages:
+{commits_text}
+
 Output Format (JSON):
 {{
   "focus_area": "string (short tag)",
@@ -73,15 +82,29 @@ Output Format (JSON):
                 response_format={"type": "json_object"},
                 temperature=0.2,
             ),
-            timeout=5.0 # 5 seconds timeout as per guide
+            timeout=10.0  # 增加到 10 秒超时
         )
 
+        if not response or not response.choices:
+            logger.warning("LLM returned empty response.")
+            return None
+            
         content = response.choices[0].message.content
         if not content:
             logger.warning("LLM returned empty content.")
             return None
-            
-        data = json.loads(content)
+        
+        # 尝试解析 JSON，如果失败则记录详细错误
+        try:
+            data = json.loads(content)
+        except json.JSONDecodeError as json_err:
+            logger.error(f"Failed to parse LLM JSON response: {json_err}. Content: {content[:200]}")
+            return None
+        
+        # 验证必需字段
+        if not isinstance(data, dict):
+            logger.error(f"LLM returned non-dict data: {type(data)}")
+            return None
         
         return NextCommitPrediction(
             focus_area=data.get("focus_area", "Unknown"),
@@ -90,11 +113,14 @@ Output Format (JSON):
         )
 
     except asyncio.TimeoutError:
-        logger.error("LLM call timed out.")
+        logger.error("LLM call timed out after 10 seconds.")
         return None
     except ImportError:
         logger.error("openai library not installed.")
         return None
+    except json.JSONDecodeError as json_err:
+        logger.error(f"JSON decode error in LLM response: {json_err}")
+        return None
     except Exception as e:
-        logger.error(f"Error during LLM prediction: {e}")
+        logger.error(f"Error during LLM prediction: {e}", exc_info=True)
         return None

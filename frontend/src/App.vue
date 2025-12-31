@@ -1,5 +1,6 @@
 <template>
-  <div class="container">
+  <DocPage v-if="currentView === 'docs'" @back="currentView = 'home'" />
+  <div v-else class="container">
     <h1 class="title">DevScope</h1>
     <p class="subtitle">开发者画像与行为倾向分析</p>
     
@@ -16,12 +17,10 @@
       <button @click="fetchAnalysis" :disabled="loading || isRequesting" class="search-btn">
         {{ loading ? '分析中...' : '分析' }}
       </button>
-      <button @click="showDocs = true" class="doc-btn">
+      <button @click="currentView = 'docs'" class="doc-btn">
         文档
       </button>
     </div>
-
-    <DocModal :is-open="showDocs" pdf-url="/docs/Phase2/DATA_ALGORITHM_THEORY.pdf" @close="showDocs = false" />
 
     <!-- 加载状态 -->
     <div v-if="loading" class="loading">
@@ -213,7 +212,7 @@ import { api } from './api'
 import * as echarts from 'echarts'
 import GravityGraph from './components/GravityGraph.vue'
 import ContributionGraph from './components/ContributionGraph.vue'
-import DocModal from './components/DocModal.vue'
+import DocPage from './components/DocPage.vue'
 
 type TechItem = {
   category: string
@@ -276,7 +275,7 @@ type AnalysisData = {
 const username = ref('')
 const loading = ref(false)
 const error = ref('')
-const showDocs = ref(false)
+const currentView = ref<'home' | 'docs'>('home')
 const analysisData = ref<AnalysisData | null>(null)
 const topicChartRef = ref<HTMLDivElement>()
 const languageChartRef = ref<HTMLDivElement>()

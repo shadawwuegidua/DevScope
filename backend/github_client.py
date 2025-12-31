@@ -25,15 +25,23 @@ class GitHubClient:
         token: Optional[str] = None,
         base_url: str = "https://api.github.com",
         min_remaining: int = 2,
-        timeout: int = 60,  # 增加到60秒
+        timeout: Optional[int] = None,  # 允许通过环境变量覆盖
     ) -> None:
         self.base_url = base_url.rstrip("/")
         self.session = requests.Session()
+        # 允许通过环境变量 GITHUB_TIMEOUT（秒）配置请求超时，默认 60 秒
+        if timeout is None:
+            try:
+                timeout_env = os.environ.get("GITHUB_TIMEOUT")
+                timeout = int(timeout_env) if timeout_env else 60
+            except Exception:
+                timeout = 60
         self.timeout = timeout
         self.min_remaining = min_remaining
         _token = token or os.environ.get("GITHUB_TOKEN")
         headers = {
-            "Accept": "application/vnd.github+json",
+            # 启用 topics 预览字段（mercy-preview），避免列表接口缺失 topics 数据
+            "Accept": "application/vnd.github+json, application/vnd.github.mercy-preview+json",
             "User-Agent": "DevScope-Client/1.0",
         }
         if _token:
@@ -117,6 +125,73 @@ class GitHubClient:
         logger.info(f"仓库列表获取完成: 共 {len(repos)} 个仓库")
         return repos
 
+    def get_user_events_public(self, username: str, per_page: int = 100, max_pages: int = 5) -> List[Dict[str, Any]]:
+        """获取用户的公开事件，用于发现其参与贡献的仓库。
+
+        仅用于收集仓库标识，不做深入事件分析。
+        """
+        events: List[Dict[str, Any]] = []
+        page = 1
+        while page <= max_pages:
+            params = {"per_page": per_page, "page": page}
+            resp = self._request("GET", f"/users/{username}/events/public", params=params)
+            if resp.status_code >= 400:
+                logger.warning(f"获取用户事件失败: {resp.status_code} {resp.text[:200]}")
+                break
+            batch = resp.json()
+            if not isinstance(batch, list) or not batch:
+                break
+            events.extend(batch)
+            if len(batch) < per_page:
+                break
+            page += 1
+        logger.info(f"用户事件获取完成: 共 {len(events)} 条")
+        return events
+
+    def get_user_contributed_repos(self, username: str, max_pages: int = 5) -> List[Dict[str, Any]]:
+        """根据公开事件收集用户参与过的仓库，并拉取仓库详情（含 topics）。"""
+        events = self.get_user_events_public(username, per_page=100, max_pages=max_pages)
+        repo_full_names: set[str] = set()
+        for ev in events:
+            repo = ev.get("repo") or {}
+            full = repo.get("name")  # 格式: owner/name
+            if isinstance(full, str) and "/" in full:
+                repo_full_names.add(full)
+
+        repos: List[Dict[str, Any]] = []
+        for full in list(repo_full_names)[:200]:  # 限制最多200个，避免过多请求
+            try:
+                owner, name = full.split("/", 1)
+                resp = self._request("GET", f"/repos/{owner}/{name}")
+                if resp.status_code >= 400:
+                    logger.warning(f"获取仓库详情失败: {full} {resp.status_code}")
+                    continue
+                repos.append(resp.json())
+            except Exception as e:
+                logger.warning(f"解析仓库 {full} 失败: {e}")
+                continue
+        logger.info(f"贡献仓库详情获取完成: 共 {len(repos)} 个")
+        return repos
+
+    def get_user_repos_union(self, username: str, include_contrib: bool = True) -> List[Dict[str, Any]]:
+        """返回用户拥有的仓库与参与贡献的仓库的并集（去重）。"""
+        owned = self.get_repos(username)
+        if include_contrib:
+            contrib = self.get_user_contributed_repos(username)
+        else:
+            contrib = []
+        # 去重依据 full_name；没有则用 name
+        seen: set[str] = set()
+        union: List[Dict[str, Any]] = []
+        for r in owned + contrib:
+            key = r.get("full_name") or r.get("name")
+            if not key or key in seen:
+                continue
+            seen.add(key)
+            union.append(r)
+        logger.info(f"仓库并集完成: owned={len(owned)}, contrib={len(contrib)}, union={len(union)}")
+        return union
+
     def get_commits(
         self,
         owner: str,
@@ -172,11 +247,13 @@ class GitHubClient:
         since_str = since_date.isoformat()
 
         # 2. 获取仓库列表
-        repos = self.get_repos(username, per_page=100, max_pages=5)
+        # 使用拥有+贡献仓库的并集
+        repos = self.get_user_repos_union(username)
         logger.info(f"开始处理 {min(len(repos), limit_repos)} 个仓库的提交记录")
         
         timestamps: List[str] = []
         recent_commits: List[Dict[str, Any]] = []
+        commit_counts_by_repo: Dict[str, int] = {}
         
         # 3. 遍历仓库 (limit_repos 作为兜底)
         for idx, repo in enumerate(repos[:limit_repos], 1):
@@ -198,6 +275,8 @@ class GitHubClient:
                     max_pages=max(1, int(per_repo_commits / 100))
                 )
                 logger.info(f"仓库 {owner}/{name} 获取到 {len(commits)} 条提交")
+                repo_full = f"{owner}/{name}"
+                commit_counts_by_repo[repo_full] = len(commits)
                 for c in commits:
                     try:
                         ts = c["commit"]["author"]["date"]
@@ -206,7 +285,7 @@ class GitHubClient:
                             # 收集提交详情
                             recent_commits.append({
                                 "message": c["commit"]["message"],
-                                "repo_name": f"{owner}/{name}",
+                                "repo_name": repo_full,
                                 "date": ts,
                                 "url": c["html_url"]
                             })
@@ -224,6 +303,7 @@ class GitHubClient:
         return {
             "commit_times": timestamps,
             "recent_commits": recent_commits,
+            "commit_counts_by_repo": commit_counts_by_repo,
             "window_start": since_str,
             "window_end": now.isoformat()
         }

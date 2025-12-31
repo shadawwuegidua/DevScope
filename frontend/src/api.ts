@@ -3,9 +3,16 @@ import axios from 'axios'
 // 默认走 Vite 代理（/api -> http://127.0.0.1:8000），如需直连可设置 VITE_API_BASE
 const API_BASE = import.meta.env.VITE_API_BASE ?? '/api'
 
+// 允许通过环境变量手动配置超时时间（毫秒）
+// 使用方式：在 .env 或启动命令中设置 VITE_API_TIMEOUT_MS，例如 120000 表示 120 秒
+const API_TIMEOUT_MS = (() => {
+  const v = Number(import.meta.env.VITE_API_TIMEOUT_MS)
+  return Number.isFinite(v) && v > 0 ? v : 60000
+})()
+
 export const api = axios.create({
   baseURL: API_BASE,
-  timeout: 60000, // 增加到60秒，因为GitHub API可能较慢
+  timeout: API_TIMEOUT_MS,
   headers: {
     'Accept': 'application/json',
     'Content-Type': 'application/json'

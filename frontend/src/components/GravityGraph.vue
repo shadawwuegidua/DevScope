@@ -72,7 +72,7 @@ function clampP(p: number): number {
 }
 
 // 辅助函数：简单的颜色变亮
-function lightenColor(color: string, percent: number): string {
+function lightenColor(color: string): string {
   // 这里简单处理，实际可以使用更复杂的颜色库
   // 如果是 hex
   if (color.startsWith('#')) {
@@ -80,12 +80,6 @@ function lightenColor(color: string, percent: number): string {
     return color
   }
   return color
-}
-
-function computeEdgeLength(p: number): number {
-  // 规范要求：L = (1 - P) * 500
-  const P = clampP(p)
-  return (1 - P) * 500
 }
 
 function renderOption() {
@@ -171,7 +165,7 @@ function renderOption() {
           y: 0.5,
           r: 0.5,
           colorStops: [
-            { offset: 0, color: lightenColor(color, 20) },
+            { offset: 0, color: lightenColor(color) },
             { offset: 1, color: color }
           ]
         },
@@ -191,8 +185,11 @@ function renderOption() {
     links.push({
       source: 'center',
       target: nodeId,
-      // 直接用概率作为 value，结合倒置的 edgeLength 区间确保 p 越大越近
-      value: p,
+      // value 用于控制边的长度：在 ECharts 中，value 越大，边长度越接近 edgeLength[0]
+      // 我们想让概率高的边更短（更近），所以使用 (1 - p) 作为 value
+      // 这样：p 大（概率高）-> value 小 -> 边长度接近 edgeLength[1] = 50（近）
+      //      p 小（概率低）-> value 大 -> 边长度接近 edgeLength[0] = 350（远）
+      value: 1 - p,
       lineStyle: {
         width: 1 + p * 4,
         curveness: 0.1,
@@ -233,7 +230,12 @@ function renderOption() {
         data: [centerNode, ...techNodes],
         links,
         force: {
-          // 倒置区间：p 越大（value 越大）边越短
+          // edgeLength 数组：[最大距离, 最小距离]
+          // 在 ECharts 中，边的 value 越大，边长度越接近 edgeLength[0]（第一个值）
+          // 我们使用 value = 1 - p，所以：
+          // - p 大（概率高）-> value 小 -> 边长度接近 edgeLength[1] = 50（近）
+          // - p 小（概率低）-> value 大 -> 边长度接近 edgeLength[0] = 350（远）
+          // 这样确保概率越高，距离越近
           edgeLength: [350, 50],
           repulsion: 600,
           gravity: 0.08,
