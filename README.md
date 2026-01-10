@@ -1,128 +1,144 @@
-# DevScope - 开发者画像与行为倾向分析平台
+# DevScope
 
-DevScope 是一个基于 GitHub 开源生态数据的开发者分析与可视化平台。通过统计建模与可解释概率分布，为开发者的技术倾向和未来活跃行为提供可视化预测。
+[![Node Version](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen)](https://nodejs.org/)
+[![Python Version](https://img.shields.io/badge/python-%3E%3D3.9-blue)](https://www.python.org/)
+[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![简体中文](https://img.shields.io/badge/简体中文-README--CN.md-red)](README-CN.md)
 
-## 项目结构
-```
-backend/      # FastAPI 后端（Phase 1-3）
-docs/         # 文档（各 Phase）
-frontend/     # Vue 3 + Vite 前端（Phase 4）
-```
+<!-- Suggestion: Place a project banner or logo here -->
+<!-- ![DevScope Banner](path/to/banner.png) -->
 
-## 前置条件
-- Python 3.9+
+## Table of Contents
+- [Background](#background)
+- [Introduction](#introduction)
+- [Features](#features)
+- [Technical Architecture](#technical-architecture)
+- [Algorithmic Core](#algorithmic-core)
+- [Installation](#installation)
+- [Usage Guide](#usage-guide)
+- [Documentation](#documentation)
+- [Development Plan](#development-plan)
+
+## Background
+Open source ecosystems are thriving, but understanding developer behavior remains a challenge. Simple metrics like commit counts often fail to capture the true expertise and future activity of a contributor. DevScope addresses this by providing a statistically rigorous, explainable platform for developer profiling and behavior prediction.
+
+## Introduction
+DevScope is a developer analysis and visualization platform based on GitHub ecosystem data. Unlike "black box" AI models, DevScope uses transparent statistical modeling (such as Multinomial and Weibull distributions) combined with Large Language Models (LLM) to provide:
+- Accurate technical tendency profiling.
+- Future activity time prediction.
+- Semantic analysis of development focus.
+
+## Features
+
+<!-- Suggestion: Place a full screenshot of the dashboard here -->
+<!-- ![Dashboard Screenshot](path/to/dashboard.png) -->
+
+1. **Multidimensional Profiling**
+   - **Tech Tendency**: Identifies developer expertise using Multinomial Distribution models.
+   - **Activity Prediction**: Predicts next active dates using Weibull Distribution analysis on commit intervals.
+
+2. **Cold Start Optimization**
+   - Uses Bayesian Fusion to combine individual data with community priors (based on top open-source developers) for accurate analysis of new or low-activity users.
+
+3. **LLM-Enhanced Prediction**
+   - Integrates Large Language Models to analyze commit messages and predict the specific focus area and type of the next contribution.
+
+4. **Interactive Visualization**
+   - **Gravity Graph**: Visualizes the strength of connection between developers and technologies.
+   - **Dashboard**: Comprehensive view of OpenRank, activity trends, and predictions.
+
+<!-- Suggestion: Place a close-up screenshot of the Gravity Graph here -->
+<!-- ![Gravity Graph](path/to/gravity_graph.png) -->
+
+## Technical Architecture
+
+### Frontend Stack
+- **Vue 3**: Progressive JavaScript Framework.
+- **Vite**: Next Generation Frontend Tooling.
+- **ECharts**: Powerful Interactive Charting.
+- **TypeScript**: Static Type Checking.
+
+### Backend Stack
+- **FastAPI**: Modern, fast (high-performance) web framework for building APIs with Python.
+- **GitHub API**: Primary data source for developer activity.
+- **OpenDigger**: Source for macro-level open source metrics (OpenRank).
+- **LLM Integrations**: Support for ECNU API and other LLM providers.
+
+<!-- Suggestion: Place an architecture diagram here showing Data Source -> Backend (Modeling) -> Frontend -->
+<!-- ![Architecture Diagram](path/to/architecture.png) -->
+
+## Algorithmic Core
+
+The system is built on explainable statistical principles:
+
+1.  **Tech Tendency (Multinomial + Laplace)**: Models technology usage probabilities with smoothing for unseen events.
+2.  **Time Prediction (Weibull Distribution)**: Fits a probability density function to inter-arrival times of commits to forecast future activity.
+3.  **Bayesian Fusion**: Merges user likelihoods with community priors for robust estimation.
+
+## Installation
+
+### Prerequisites
 - Node.js 18+
-- （可选）GitHub Token（提高 API 速率，配置在环境变量中）
-- （可选）LLM API Key（用于下一次提交预测功能，支持 ECNU API）
+- Python 3.9+
+- Git
 
-## 环境变量配置 (.env)
-在 `backend` 目录下创建 `.env` 文件，添加以下配置：
-```env
-# GitHub Token (可选，用于提高 GitHub API 速率限制)
-GITHUB_TOKEN=your_github_token_here
+### 1. GitHub Token Setup
+Generate a GitHub Personal Access Token (Classic) with `repo` and `user` scopes to increase API rate limits.
 
-# LLM API 配置 (可选，用于启用 AI 预测功能)
-# 默认使用 ECNU 开放 API
-LLM_API_KEY=your_ecnu_api_key_here
-# LLM_API_BASE=https://chat.ecnu.edu.cn/open/api/v1  # 默认值，可不填
-# LLM_MODEL=ecnu-plus                                # 默认值，可不填
+### 2. Project Setup
+```bash
+git clone <repository-url>
+cd DevScope
 ```
 
-## 后端启动（FastAPI）
-1. 安装依赖：
-   ```bash
-   cd backend
-   pip install -r requirements.txt
-   ```
-2. 启动服务：
-   ```bash
-   python main.py
-   ```
-3. 健康检查：
-   - 访问 `http://localhost:8000/health` 应返回 `{status: 'ok'}`
+### 3. Backend Setup
+```bash
+cd backend
+# Create .env file
+# Add:
+# GITHUB_TOKEN=your_token
+# LLM_API_KEY=your_key (Optional)
 
-## 前端启动（Vue 3 + Vite）
-1. 安装依赖（必须）：
-   ```bash
-   cd frontend
-   npm install
-   ```
-   - 说明：此步骤会安装包含 `concurrently` 在内的前端依赖；若跳过，`npm run dev:all` 可能报错“concurrently 不是内部或外部命令”。
+# Install dependencies
+pip install -r requirements.txt
 
-2. 一键启动（推荐，前后端同时运行）：
-   ```bash
-   # 在 frontend 目录内
-   npm run dev:all
-   ```
-   - 后端：FastAPI（端口 8000）
-   - 前端：Vite（端口 5173）
+# Start Server
+python main.py
+```
 
-3. 分别启动（备选方案）：
-   - 终端A（后端）：
-     ```bash
-     cd backend
-     python main.py
-     ```
-   - 终端B（前端）：
-     ```bash
-     cd frontend
-     npm run dev
-     ```
+### 4. Frontend Setup
+```bash
+cd frontend
+# Install dependencies
+npm install
 
-4. 打开浏览器访问 `http://localhost:5173`
+# Start Client
+npm run dev
+# OR run both (Recommended)
+npm run dev:all
+```
 
-## 使用指南
-1. 在页面输入 GitHub 用户名（如 `octocat`），点击“分析”
-2. 查看分析结果：
-   - 个人信息卡片（头像、简介、仓库数等）
-   - 技术倾向柱状图（各技术的概率）
-   - 技术关系引力图（概率越高越靠近中心）
-   - 活跃时间预测（拟合的分布与下月活跃概率）
-3. 点击引力图中的技术节点，可查看该技术的概率数值
+## Usage Guide
 
-## 关键实现原则
-- 统计建模可解释，禁止引入黑箱模型（深度学习等）
-- 遵循文档中的拉普拉斯平滑、时间分布拟合、冷启动融合等规则
-- 前端满足最小必要实现：不做额外内容，专注核心图表与交互
+1.  **Start the System**: Ensure both backend (Port 8000) and frontend (Port 5173) are running.
+2.  **Analyze Developer**: Enter a GitHub username (e.g., `torvalds`) in the search bar.
+3.  **Explore Insights**:
+    *   View the **Gravity Graph** to see tech stack affinity.
+    *   Check **Activity Forecast** for next predicted active days.
+    *   Use **AI Prediction** to guess the next commit content.
 
-## 常见问题与排查
-- 前端页面无响应：
-  - 确认后端已运行并 `http://localhost:8000/health` 正常
-   - 打开浏览器开发者工具查看 Network 是否有 `/api/analyze/{username}` 请求
-   - 确认 Vite 代理已生效，`vite.config.ts` 中 `/api` 指向 `http://localhost:8000`
-   - 推荐使用 `npm run dev:all`，避免因未启动后端导致请求失败
-- 速率限制：
-  - GitHub API 受限时后端会提示，请稍后重试或配置令牌提升速率
+## Documentation
+Detailed documentation is available in the `docs/` directory:
 
-### 端口占用（Windows）
-- 检查端口：
-   ```powershell
-   netstat -ano | Select-String ":8000"
-   netstat -ano | Select-String ":5173"
-   ```
-- 结束占用进程：
-   ```powershell
-   # 将 <PID> 替换为上一步查到的进程号
-   Stop-Process -Id <PID> -Force
-   ```
-- 健康检查（PowerShell）：
-   ```powershell
-   Invoke-WebRequest -Uri http://localhost:8000/health -UseBasicParsing | Select-Object -ExpandProperty Content
-   ```
+- [Project Overview](docs/PROJECT_OVERVIEW.md)
+- [Algorithm Theory](docs/DATA_ALGORITHM_THEORY.md)
+- [LLM Feature Guide](backend/LLM_FEATURE_GUIDE.md)
 
-### `npm run dev:all` 报错 "concurrently 不是内部或外部命令"
-- 解决：在 frontend 目录重新安装依赖
-   ```bash
-   cd frontend
-   npm install
-   npm run dev:all
-   ```
-
-### GitHub Token（提升速率）
-- PowerShell 设置环境变量（临时）：
-   ```powershell
-   $env:GITHUB_TOKEN = "your_github_token_here"
-   ```
-   重新启动后端后生效。
+## Development Plan
+- [x] **Phase 1**: Core Data Fetching & Cleaning (GitHub/OpenDigger)
+- [x] **Phase 2**: Statistical Modeling (Weibull/Multinomial)
+- [x] **Phase 3**: API Development & LLM Integration
+- [x] **Phase 4**: Frontend Visualization & Interactive Dashboard
+- [ ] **Future**: Multi-user comparison & Team profiling
 
 
