@@ -33,6 +33,7 @@ from dotenv import load_dotenv
 load_dotenv(os.path.join(os.path.dirname(__file__), '.env'))
 
 from fastapi import FastAPI, HTTPException, Query, Path, Request
+from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
@@ -313,43 +314,24 @@ async def health_check(request: Request):
     return {"status": "ok", "timestamp": datetime.now().isoformat()}
 
 
-@app.get(
-    "/api/analyze/{username}",
-    response_model=DeveloperAnalysis,
-    tags=["Analysis"],
-    summary="分析开发者",
-    description="根据 GitHub 用户名分析开发者的技术倾向和活跃预测"
-)
-async def analyze_developer(
-    request: Request,
-    username: str = Path(..., min_length=1, max_length=39, description="GitHub 用户名"),
-    skip_cache: bool = Query(False, description="是否跳过缓存（仅演示用）")
-) -> DeveloperAnalysis:
+async def _analysis_generator(username: str, client_host: str = "unknown"):
     """
-    **核心接口：GET /api/analyze/{username}**
-    
-    数据流：
-    1. 调用 github_client 获取用户数据
-    2. 传入 modeling.py 进行统计分析
-    3. 返回 DeveloperAnalysis 响应
-    
-    错误处理：
-    - 用户不存在 -> 404
-    - API 限流 -> 503
-    
-    冷启动逻辑：
-    - 项目数 < 5 时自动启用
-    - 返回融合社区均值的预测结果
+    Core analysis logic as an async generator.
+    Yields:
+        {"type": "progress", "value": int, "message": str}
+        {"type": "result", "data": DeveloperAnalysis}
     """
-    logger.info(f"收到分析请求: username={username}, client={request.client.host if request.client else 'unknown'}")
+    logger.info(f"收到分析请求 (Stream): username={username}, client={client_host}")
     
     try:
         # Step 1: 获取用户基本信息
+        yield {"type": "progress", "value": 10, "message": f"正在获取用户 {username} 的基本信息..."}
         logger.info(f"开始获取用户信息: {username}")
         user_info = github_client.get_user(username)
         logger.info(f"用户信息获取成功: {user_info.get('login', 'unknown')}")
         
         # Step 2: 获取用户仓库列表
+        yield {"type": "progress", "value": 20, "message": "用户信息获取成功，正在获取仓库列表..."}
         logger.info(f"开始获取仓库列表: {username}")
         # 合并拥有与参与贡献的仓库
         repos = github_client.get_user_repos_union(username)
@@ -362,7 +344,8 @@ async def analyze_developer(
                 detail=f"用户 {username} 没有公开仓库"
             )
         
-        # Step 3: 提取关键数据（先取语言与主要语言，Topic 将在提交统计后加权计算）
+        # Step 3: 提取关键数据
+        yield {"type": "progress", "value": 30, "message": f"找到 {len(repos)} 个仓库，正在提取关键数据..."}
         project_count = len(repos)
         primary_language = _extract_primary_language(repos)
         repo_languages = _extract_languages(repos)
@@ -370,7 +353,8 @@ async def analyze_developer(
             f"提取数据: 项目数={project_count}, 主要语言={primary_language}, languages={len(repo_languages)}"
         )
         
-        # Step 4: 获取提交历史（用于时间分布拟合），已基于并集仓库
+        # Step 4: 获取提交历史
+        yield {"type": "progress", "value": 40, "message": "正在分析最近提交历史与活跃度..."}
         logger.info(f"开始获取提交历史: {username}")
         commit_activity = github_client.get_user_commit_activity(
             username, limit_repos=min(20, project_count)
@@ -384,7 +368,8 @@ async def analyze_developer(
         repo_topics = _extract_repo_topics_weighted(repos, commit_counts_by_repo)
         logger.info(f"加权 Topic 计算完成: topics={len(repo_topics)}")
 
-        # Step 3.1: 组装“近期贡献的 Topic/语言/仓库/OpenRank”列表（按最近有提交的仓库排序）
+        # Step 3.1: 组装“近期贡献的 Topic/语言/仓库/OpenRank”列表
+        yield {"type": "progress", "value": 50, "message": "正在构建近期贡献图谱..."}
         recent_topic_contributions: List[RecentTopicContribution] = []
         try:
             sorted_repos_by_commit = sorted(
@@ -427,7 +412,8 @@ async def analyze_developer(
         except Exception as e:
             logger.warning(f"构建近期贡献列表失败: {e}")
         
-        # Step 4.1: LLM 预测下一次提交（失败时返回 None，不影响主流程）
+        # Step 4.1: LLM 预测
+        yield {"type": "progress", "value": 60, "message": "正在使用 LLM 预测下一次提交..."}
         commit_messages = [c.get("message", "") for c in recent_commits_data]
         next_commit_pred = None
         try:
@@ -437,10 +423,11 @@ async def analyze_developer(
             next_commit_pred = None
         
         # Step 5: 冷启动检测和数据融合
+        yield {"type": "progress", "value": 70, "message": "正在计算统计模型与社区数据融合..."}
         is_cold = modeling.is_cold_start(project_count)
         confidence_weight = modeling.calculate_confidence_weight(project_count)
         
-        # Step 6: 获取社区基准数据（如需要）
+        # Step 6: 获取社区基准数据
         if is_cold:
             developer_type = modeling.get_developer_type_guess(primary_language)
             community_tendency = modeling.get_community_average_tendency(
@@ -454,7 +441,6 @@ async def analyze_developer(
             community_time_params = None
         
         # Step 7: 计算技术倾向概率
-        # 使用 modeling.calculate_topic_probability（含拉普拉斯平滑）
         topic_probs = modeling.calculate_topic_probability(
             topics=repo_topics if repo_topics else [],
             alpha=1.0,
@@ -470,7 +456,6 @@ async def analyze_developer(
         )
         
         # Step 8: 计算活跃时间分布
-        # 仅在数据充分时计算
         if project_count >= 5 and commit_times:
             time_pred = modeling.fit_time_distribution(commit_times)
             time_prediction = TimePrediction(
@@ -482,7 +467,8 @@ async def analyze_developer(
             time_prediction = None
         
         # Step 9: 构建响应对象
-        # 获取 OpenRank（从 OpenDigger 在线 API）
+        yield {"type": "progress", "value": 90, "message": "正在获取 OpenRank 评分..."}
+        # 获取 OpenRank
         openrank_value = None
         try:
             openrank_value = get_user_openrank(username, timeout=10)
@@ -492,6 +478,7 @@ async def analyze_developer(
                 logger.info(f"OpenRank 数据不存在: {username} (用户可能未被 OpenDigger 收录)")
         except Exception as e:
             logger.warning(f"OpenRank 获取失败: {e}")
+            
         persona = PersonaInfo(
             username=username,
             name=user_info.get("name"),
@@ -509,7 +496,6 @@ async def analyze_developer(
         # 转换技术倾向为预测结果列表
         topic_predictions = _sort_predictions_by_probability(topic_probs)
         language_predictions = _sort_predictions_by_probability(language_probs)
-        # 默认 tech_tendency 优先 Topic，若 Topic 为空则使用 Language 兜底，保持前端/引力图有数据
         tech_predictions = topic_predictions if topic_predictions else language_predictions
 
         logger.info(
@@ -533,7 +519,7 @@ async def analyze_developer(
         
         logger.info(f"分析完成: {username}, 技术倾向数量={len(tech_predictions)}")
         
-        return DeveloperAnalysis(
+        result = DeveloperAnalysis(
             next_commit_prediction=next_commit_pred,
             username=username,
             is_cold_start=is_cold,
@@ -543,7 +529,7 @@ async def analyze_developer(
             topic_tendency=topic_predictions,
             language_tendency=language_predictions,
             time_prediction=time_prediction,
-            match_scores=None,  # 暂不返回，可通过 /api/match 单独获取
+            match_scores=None,
             primary_language=primary_language,
             cold_start_note=cold_start_note,
             recent_commits=[CommitInfo(**c) for c in recent_commits_data],
@@ -551,11 +537,13 @@ async def analyze_developer(
             recent_topic_contributions=recent_topic_contributions,
         )
         
-    except HTTPException:
-        # 重新抛出 HTTP 异常
-        raise
+        yield {"type": "progress", "value": 100, "message": "分析完成！"}
+        yield {"type": "result", "data": result}
+        
+    except HTTPException as e:
+        yield {"type": "rx_error", "data": e.detail}
+        raise e
     except RuntimeError as e:
-        # GitHub API 错误（通常是用户不存在或限流）
         logger.error(f"RuntimeError for {username}: {str(e)}")
         if "404" in str(e) or "not found" in str(e).lower():
             raise HTTPException(
@@ -578,6 +566,62 @@ async def analyze_developer(
             status_code=500,
             detail=f"服务器内部错误: {str(e)}"
         )
+
+
+@app.get("/api/analyze/{username}/stream", tags=["Analysis"])
+async def analyze_developer_stream(
+    request: Request,
+    username: str = Path(..., min_length=1, max_length=39)
+):
+    """
+    Streaming version of the analysis endpoint.
+    Yields Server-Sent Events (SSE).
+    """
+    async def sse_wrapper():
+        try:
+            async for item in _analysis_generator(username, request.client.host if request.client else 'unknown'):
+                if item["type"] == "result":
+                    data = item["data"].dict()
+                    yield f"data: {json.dumps({'type': 'result', 'data': data}, ensure_ascii=False)}\n\n"
+                elif item["type"] == "rx_error":
+                    pass
+                else:
+                    yield f"data: {json.dumps(item, ensure_ascii=False)}\n\n"
+        except HTTPException as e:
+             yield f"data: {json.dumps({'type': 'error', 'message': str(e.detail)}, ensure_ascii=False)}\n\n"
+        except Exception as e:
+             yield f"data: {json.dumps({'type': 'error', 'message': str(e)}, ensure_ascii=False)}\n\n"
+
+    return StreamingResponse(sse_wrapper(), media_type="text/event-stream")
+
+
+@app.get(
+    "/api/analyze/{username}",
+    response_model=DeveloperAnalysis,
+    tags=["Analysis"],
+    summary="分析开发者",
+    description="根据 GitHub 用户名分析开发者的技术倾向和活跃预测"
+)
+async def analyze_developer(
+    request: Request,
+    username: str = Path(..., min_length=1, max_length=39, description="GitHub 用户名"),
+    skip_cache: bool = Query(False, description="是否跳过缓存（仅演示用）")
+) -> DeveloperAnalysis:
+    """
+    **核心接口：GET /api/analyze/{username}**
+    (Now wraps the streaming generator)
+    """
+    generator = _analysis_generator(username, request.client.host if request.client else 'unknown')
+    last_result = None
+    async for item in generator:
+        if item["type"] == "result":
+            last_result = item["data"]
+    
+    if last_result:
+        return last_result
+    # If we get here, generator finished without result (error handled inside generator usually re-raises)
+    raise HTTPException(status_code=500, detail="未收到分析结果")
+
 
 
 @app.post(

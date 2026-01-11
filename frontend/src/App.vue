@@ -24,8 +24,10 @@
 
     <!-- 加载状态 -->
     <div v-if="loading" class="loading">
-      <div class="spinner"></div>
-      <p>正在抓取数据并拟合概率模型...</p>
+      <div class="progress-bar-container">
+        <div class="progress-bar-fill" :style="{ width: progress + '%' }"></div>
+      </div>
+      <p class="progress-text">{{ progressMessage || '初始化中...' }} <span v-if="progress > 0" class="progress-pct">({{ progress }}%)</span></p>
     </div>
 
     <!-- 错误提示 -->
@@ -274,6 +276,8 @@ type AnalysisData = {
 
 const username = ref('')
 const loading = ref(false)
+const progress = ref(0)
+const progressMessage = ref('')
 const error = ref('')
 const currentView = ref<'home' | 'docs'>('home')
 const analysisData = ref<AnalysisData | null>(null)
@@ -310,7 +314,6 @@ const displayedMatches = computed(() => {
 let isRequesting = false
 
 async function fetchAnalysis() {
-  // 防止重复请求
   if (isRequesting || loading.value) {
     return
   }
@@ -329,56 +332,79 @@ async function fetchAnalysis() {
 
   isRequesting = true
   loading.value = true
+  progress.value = 0
+  progressMessage.value = '准备开始...'
   error.value = ''
   analysisData.value = null
 
+  console.log('开始分析用户(SSE):', searchUsername)
+  
+  // 使用 SSE 流式获取进度和结果
+  const streamUrl = `/api/analyze/${encodeURIComponent(searchUsername)}/stream?t=${Date.now()}`
+  
+  let eventSource: EventSource | null = null;
   try {
-    console.log('开始分析用户:', searchUsername)
-    
-    // 修复：baseURL已经是/api，所以这里只需要/analyze/{username}
-    // 添加时间戳防止缓存
-    const res = await api.get(`/analyze/${encodeURIComponent(searchUsername)}?t=${Date.now()}`)
-    
-    if (!res.data) {
-      throw new Error('后端返回数据为空')
+    eventSource = new EventSource(streamUrl)
+  
+    eventSource.onopen = () => {
+      console.log('SSE 连接已建立')
     }
-    
-    console.log('分析成功，收到数据:', res.data)
-    console.log('技术倾向数据:', res.data.tech_tendency)
-    analysisData.value = res.data
-    
-    // 等待DOM更新后渲染图表
-    await nextTick()
-    // 再次等待确保DOM完全渲染
-    await new Promise(resolve => setTimeout(resolve, 100))
-    renderCharts()
-  } catch (err: any) {
-    console.error('分析失败:', err)
-    
-    // 处理各种错误情况
-    if (err?.code === 'ECONNABORTED' || err?.message?.includes('timeout')) {
-      error.value = '请求超时，请稍后重试或设置 GitHub Token 提升速率'
-    } else if (err?.code === 'ERR_NETWORK' || err?.message?.includes('Network Error') || err?.message?.includes('Failed to fetch')) {
-      error.value = '无法连接后端服务，请确认 http://localhost:8000 正在运行'
-    } else if (err?.response?.status === 404) {
-      const detail = err?.response?.data?.detail || err?.response?.data?.error
-      error.value = detail || `GitHub 用户 "${searchUsername}" 不存在或没有公开仓库`
-    } else if (err?.response?.status === 503) {
-      error.value = err?.response?.data?.detail || err?.response?.data?.error || 'GitHub API 请求次数已达限制，请 1 小时后重试'
-    } else if (err?.response?.status === 400) {
-      error.value = err?.response?.data?.detail || err?.response?.data?.error || '请求参数错误'
-    } else if (err?.response?.status === 500) {
-      error.value = err?.response?.data?.detail || err?.response?.data?.error || '服务器内部错误，请稍后重试'
-    } else if (err?.response?.data?.detail) {
-      error.value = err.response.data.detail
-    } else if (err?.response?.data?.error) {
-      error.value = err.response.data.error
-    } else {
-      error.value = err?.message || '分析失败，请稍后重试'
+
+    eventSource.onmessage = async (event) => {
+      try {
+        if (!event.data) return
+        const msg = JSON.parse(event.data)
+        
+        if (msg.type === 'progress') {
+          progress.value = msg.value
+          progressMessage.value = msg.message
+        } else if (msg.type === 'result') {
+          console.log('收到分析结果:', msg.data)
+          analysisData.value = msg.data
+          eventSource?.close()
+          loading.value = false
+          isRequesting = false
+          
+          await nextTick()
+          await new Promise(resolve => setTimeout(resolve, 100))
+          renderCharts()
+        } else if (msg.type === 'error' || msg.type === 'rx_error') {
+          throw new Error(msg.message || msg.data)
+        }
+      } catch (e: any) {
+        console.error('SSE Message Error:', e)
+        error.value = e.message || '解析响应失败'
+        eventSource?.close()
+        loading.value = false
+        isRequesting = false
+      }
     }
-  } finally {
-    loading.value = false
-    isRequesting = false
+
+    eventSource.onerror = (e) => {
+      // 只有在没有收到数据且报错时才认为是连接错误
+      if (eventSource?.readyState === EventSource.CLOSED) {
+          if (!analysisData.value && !error.value) {
+             console.error('SSE Closed prematurely', e)
+             error.value = '连接中断或分析出错，请检查网络或重试'
+             loading.value = false
+             isRequesting = false
+          }
+      } else {
+          console.error('SSE Error:', e)
+          // 尝试关闭
+          eventSource?.close()
+          if (!error.value) {
+             error.value = '连接服务器失败，请确认后端服务运行正常'
+          }
+          loading.value = false
+          isRequesting = false
+      }
+    }
+  } catch(err: any) {
+      console.error('SSE Setup Error:', err)
+      error.value = err.message
+      loading.value = false
+      isRequesting = false
   }
 }
 
@@ -1040,5 +1066,36 @@ function scrollToMatchItem(tech: string) {
   color: #2d3748;
   font-size: 1.1rem;
   line-height: 1.6;
+}
+
+/* 进度条样式 */
+.progress-bar-container {
+  width: 300px;
+  height: 10px;
+  background-color: rgba(255, 255, 255, 0.2);
+  border-radius: 5px;
+  margin: 0 auto 1.5rem;
+  overflow: hidden;
+  position: relative;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #4facfe 0%, #00f2fe 100%);
+  border-radius: 5px;
+  transition: width 0.3s ease-out;
+  box-shadow: 0 0 10px rgba(0, 242, 254, 0.7);
+}
+
+.progress-text {
+  font-size: 1.1rem;
+  font-weight: 500;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.progress-pct {
+  font-size: 0.9rem;
+  opacity: 0.8;
+  margin-left: 5px;
 }
 </style>
