@@ -145,4 +145,12 @@ Detailed documentation is available in the `docs/` directory:
 - [x] **Phase 4**: Frontend Visualization & Interactive Dashboard
 - [ ] **Future**: Multi-user comparison & Team profiling
 
+## Team
+**Team Name**: 爱如潮水 (Love Like a Tide)
+
+- **Captain**: **Zhuang Ziyou**
+  - **Role**: Full-stack Development, Documentation, PPT
+- **Member**: **Cao Yulin**
+  - **Role**: Debugging, Documentation, PPT, Demo Video Recording
+
 

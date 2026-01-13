@@ -16,8 +16,19 @@ $$
 - 阻尼因子 $\\alpha$：常取 0.85，用于防止循环放大并引入基础分布。
 - 时间衰减：近期行为权重更高（由官方离线计算体现）。
 
-本项目仅从 OpenDigger 官方 API 拉取已计算的年度 OpenRank，不在本地重算。仅选择 JSON 中最新年份键（形如 "YYYY"）的值，失败返回 N/A。代码见 
-\`backend/opendigger_client.py\` 的 \`get_user_openrank\` 与 \`get_repo_openrank\`。
+本项目对 OpenRank 的处理遵循如下“严格与代码一致”的规则：
+
+- 概念层面：OpenRank 衡量的是开发者或仓库在开源网络中的综合影响力，来源于官方离线计算结果；本项目不在本地重算该指标，上式用于原理说明。
+- 数据来源：通过 OpenDigger 官方静态 API 获取 JSON 数据。
+    - 开发者：\`https://oss.x-lab.info/open_digger/github/{username}/openrank.json\`
+    - 仓库：\`https://oss.x-lab.info/open_digger/github/{owner}/{repo}/openrank.json\`
+- 年度值选择：仅从键形如 "YYYY" 的年度条目中选取最新年份的值进行展示；形如 "YYYY-MM" 的月度条目不参与选择。
+- 数值处理：返回值统一保留两位小数；若 API 返回 404 或解析失败则视为无数据，返回 None（前端显示为 N/A）。
+- 代码对应：
+    - 开发者 OpenRank：\`backend/opendigger_client.py\` 中的 \`get_user_openrank(username, timeout)\` 完成上述逻辑（包含年度筛选与两位小数保留）。
+    - 仓库 OpenRank：\`backend/opendigger_client.py\` 中的 \`get_repo_openrank(owner, repo, timeout)\` 完成相同的年度筛选与返回处理。
+
+一致性声明：本文档的 OpenRank 描述与当前实现完全一致。若未来需要在本地重算 OpenRank，则需另行引入关系图构建、时间衰减权重、迭代求解等模块，不属于本项目当前范围。
 
 ## 2. 符号定义与参数表 (Symbol Definitions and Parameters)
 
@@ -31,11 +42,11 @@ $$
 | $\\mathcal{C}$ | 提交时间戳集合 (Commit Timestamps) | \`github_client.get_user_commit_activity\` |
 | $t_i$ | 第 $i$ 次提交的时间点 | $t_i \\in \\mathcal{C}, t_i \\in W_{obs}$ |
 | $\\Delta t_i$ | 相邻提交的时间间隔 (Time Interval) | $\\Delta t_i = t_{i+1} - t_i$ |
-| $\\mathcal{R}$ | 用户参与的仓库集合 (Repositories) | \`github_client.get_repos\` |
-| $\\mathcal{L}$ | 技术标签/语言集合 (Topics/Languages) | 从 $\\mathcal{R}$ 中提取的 \`language\` 和 \`topics\` |
-| $N_{proj}$ | 参与项目总数 (Total Projects) | $|\\mathcal{R}|$ 或 \`user.public_repos\` |
+| $\\mathcal{R}$ | 用户参与的仓库集合 (Repositories) | \`github_client.get_user_repos_union\` (拥有仓库 ∪ 参与贡献仓库) |
+| $\\mathcal{L}$ | 技术标签/语言集合 (Topics/Languages) | 从 $\\mathcal{R}$ 中提取的 \`language\` 和 \`topics\`；Topic 仅指真实仓库 \`topics\` 标签，不对语言兜底 |
+| $N_{proj}$ | 参与项目总数 (Total Projects) | $\\vert\\mathcal{R}\\vert$ 或 \`user.public_repos\` |
 | $n_k$ | 特定技术 $k$ 的出现频次 | Count of topic $k$ in $\\mathcal{L}$ |
-| $K$ | 技术类别的总数 (Total Categories) | $|\\text{unique}(\\mathcal{L})|$ |
+| $K$ | 技术类别的总数 (Total Categories) | $\\vert\\text{unique}(\\mathcal{L})\\vert$ |
 | $M_{od}$ | OpenDigger 宏观指标集合 | \`opendigger_client.get_developer_metrics\` |
 | $P(T_k)$ | 开发者对技术 $k$ 的倾向概率 | 建模计算结果 |
 | $P(Active)$ | 未来 30 天活跃概率 | 建模计算结果 |
@@ -76,7 +87,7 @@ $$
     *   **来源**: \`get_repos(username)\`
     *   **定义**: $\\mathcal{R} = \\{r_1, r_2, \\dots, r_n\\}$
     *   **元素结构**: 每个 $r_j$ 包含 \`{name, language, topics, stargazers_count}\`。
-    *   **特征提取**: $\\mathcal{L} = \\bigcup_{r \\in \\mathcal{R}} (\\{r.language\\} \\cup r.topics)$
+    *   **特征提取**: 优先从 $r.topics$ 提取，若为空则回退使用 $r.language$（两者不混用）。
     *   **用途**: 用于技术倾向性预测 ($P(T_k)$)。
 
 3.  **用户基础画像 ($U_{profile}$)**
@@ -88,13 +99,11 @@ $$
 
 通过 \`opendigger_client.py\` 获取，作为宏观能力参考。
 
-1.  **开发者指标集合 ($M_{od}$)**
-    *   **来源**: \`get_developer_metrics(username, data)\`
-    *   **定义**: $M_{od} = \\{m_{rank}, m_{activity}, m_{stars}, \\dots\\}$
-    *   **具体指标**:
-        *   $m_{rank}$: OpenRank 值，衡量在开源网络中的影响力。
-        *   $m_{activity}$: 长期活跃度指数。
-    *   **用途**: 辅助展示，不直接参与概率分布拟合，但在冷启动或数据缺失时可作为定性参考。
+1.  **OpenRank 影响力 ($m_{rank}$)**
+    *   **来源**: \`get_user_openrank(username)\`
+    *   **定义**: 衡量开发者在不同年份的开源协作网络中的影响力。
+    *   **用途**: 直接展示，用于辅助判断开发者在社区中的相对位置。
+    *   **注**: 其他 OpenDigger 指标（如 Activity）暂未纳入本阶段的核心计算模型。
 
 ---
 
@@ -122,7 +131,7 @@ $$
 
 使用 **最大似然估计 (Maximum Likelihood Estimation, MLE)** 求解参数 $\\hat{k}, \\hat{\\lambda}$：
 $$
-(\\hat{k}, \\hat{\\lambda}) = \\operatorname*{argmax}_{k, \\lambda} \\sum_{i=1}^{|\\Delta T|} \\ln f(\\Delta t_i; k, \\lambda)
+(\\hat{k}, \\hat{\\lambda}) = \\operatorname*{argmax}_{k, \\lambda} \\sum_{i=1}^{\\vert\\Delta T\\vert} \\ln f(\\Delta t_i; k, \\lambda)
 $$
 *注：工程实现中使用 \`scipy.stats.weibull_min.fit\`。*
 
@@ -149,8 +158,29 @@ $$
 
 目标是估计开发者在特定技术领域 $T_k$ 的投入概率 $P(T_k)$。
 
-#### 4.2.1 贝叶斯平滑估计 (Bayesian Smoothing)
-基于多项分布假设，使用拉普拉斯平滑 (Laplace Smoothing) 计算后验概率，以解决小样本下的零概率问题：
+#### 4.2.1 话题权重构造 (Topic Weighting)
+**注意**：此权重逻辑仅适用于 **Topics** 数据的统计。若使用语言（Language）作为兜底数据，则采用简单计数。
+
+为避免当每个话题仅在一个仓库中出现时概率过于均匀的状况，我们在统计 $n_k$ 前为仓库级话题引入“影响力权重”，结合仓库星标与用户在该仓库的提交次数（使用自然对数 $\\ln$）：
+
+$$
+w_r = \\max\\big(1,\\; \\lfloor\\ln(1+\\text{stars}_r)\\rfloor + \\lfloor\\ln(1+\\text{commits}_r)\\rfloor\\big)
+$$
+
+其中：
+- $\\text{stars}_r$: 仓库 $r$ 的 \`stargazers_count\`。
+- $\\text{commits}_r$: 目标用户在仓库 $r$ 于 $W_{obs}$ 窗口中的提交条数，来源于 \`github_client.get_user_commit_activity\`。
+
+据此，针对话题 $T_k$ 的加权计数为：
+
+$$
+n_k = \\sum_{r\\in\\mathcal{R}} \\big(\\mathbb{1}[T_k\\in r.\\text{topics}] \\cdot w_r\\big)
+$$
+
+该设计使得热门仓库与用户高投入仓库对对应话题的贡献更大，从而拉开概率差异。
+
+#### 4.2.2 贝叶斯平滑估计 (Bayesian Smoothing)
+在得到加权计数 $n_k$ 后，基于多项分布假设，使用拉普拉斯平滑 (Laplace Smoothing) 计算后验概率，以解决小样本下的零概率问题：
 
 $$
 P_{user}(T_k) = \\frac{n_k + \\alpha}{N_{total} + \\alpha \\cdot K}
@@ -162,7 +192,7 @@ $$
 *   $K$: 唯一技术标签的总数。
 *   $\\alpha = 1$: 平滑系数。
 
-#### 4.2.2 冷启动加权融合 (Cold Start Weighted Fusion)
+#### 4.2.3 冷启动加权融合 (Cold Start Weighted Fusion)
 当用户项目数 $N_{proj}$ 较少时，用户自身的统计数据具有高方差。此时引入社区先验分布 $P_{community}$ 进行融合。
 
 **步骤 1: 计算置信度权重 $w$**
@@ -177,6 +207,8 @@ $$
 P_{final}(T_k) = w \\cdot P_{user}(T_k) + (1 - w) \\cdot P_{community}(T_k)
 $$
 其中 $P_{community}$ 根据开发者的推测类型（如 "Backend", "AI/ML"）选取预置的先验分布。
+
+备注：若目标用户近一年内不存在任何真实话题（未设置 \`topics\`），则前端仅展示语言分布，并在“技术倾向预测”区块提示“暂无Topic倾向数据”。引力图亦回退为语言关系图。
 
 ---
 
@@ -203,8 +235,4 @@ $$
 \\text{不匹配 (Mismatch)} & S_{match} < 0.2 
 \\end{cases}
 $$
-
----
-
-**项目仓库**: [https://github.com/shadawwuegidua/DevScope](https://github.com/shadawwuegidua/DevScope)
-`
+\`;
