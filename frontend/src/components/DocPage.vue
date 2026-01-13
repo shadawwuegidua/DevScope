@@ -10,37 +10,27 @@
       </a>
     </div>
     <div class="content-container">
-      <div class="markdown-body" v-html="renderedContent"></div>
+      <iframe :src="pdfUrl" class="pdf-frame" title="Algorithm Documentation"></iframe>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
-import MarkdownIt from 'markdown-it'
-// @ts-ignore
-import markdownItKatex from 'markdown-it-katex'
-import { algorithmDoc } from '../assets/algorithmDoc'
+import { ref } from 'vue'
+import pdfFile from '../assets/DATA_ALGORITHM_THEORY.pdf'
 
 defineEmits<{
   (e: 'back'): void
 }>()
 
-const md = new MarkdownIt({
-  html: true,
-  linkify: true,
-  typographer: true
-})
-
-md.use(markdownItKatex)
-
-const renderedContent = computed(() => md.render(algorithmDoc))
+// Vite handle assets with hashing, so we just use the imported URL
+const pdfUrl = ref(pdfFile)
 </script>
 
 <style scoped>
 .doc-page {
   width: 100%;
-  min-height: 100vh;
+  height: 100vh;
   background-color: #f8f9fa;
   display: flex;
   flex-direction: column;
@@ -100,138 +90,13 @@ const renderedContent = computed(() => md.render(algorithmDoc))
 .content-container {
   flex: 1;
   width: 100%;
-  max-width: 1000px;
-  margin: 2rem auto;
-  padding: 2rem;
-  background-color: white;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  overflow: hidden;
+  background-color: #fff;
 }
 
-/* Markdown Styles (simplified version of github-markdown-css) */
-.markdown-body {
-  color: #333;
-  line-height: 1.6;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-}
-
-:deep(h1) {
-  font-size: 2em;
-  border-bottom: 1px solid #eaecef;
-  padding-bottom: 0.3em;
-  margin-bottom: 1rem;
-}
-
-:deep(h2) {
-  font-size: 1.5em;
-  border-bottom: 1px solid #eaecef;
-  padding-bottom: 0.3em;
-  margin-top: 1.5rem;
-  margin-bottom: 1rem;
-}
-
-:deep(h3) {
-  font-size: 1.25em;
-  margin-top: 1.5rem;
-  margin-bottom: 1rem;
-}
-
-:deep(p) {
-  margin-bottom: 1rem;
-  line-height: 1.8;
-  overflow-wrap: break-word;
-}
-
-:deep(li) {
-  margin-bottom: 0.5rem;
-  line-height: 1.8;
-}
-
-:deep(table) {
-  border-collapse: collapse;
+.pdf-frame {
   width: 100%;
-  margin-bottom: 1rem;
-}
-
-:deep(th), :deep(td) {
-  border: 1px solid #dfe2e5;
-  padding: 0.6em 1em;
-}
-
-:deep(th) {
-  background-color: #f6f8fa;
-}
-
-:deep(tr:nth-child(2n)) {
-  background-color: #f6f8fa;
-}
-
-:deep(code) {
-  background-color: rgba(27,31,35,0.05);
-  border-radius: 3px;
-  font-family: SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
-  padding: 0.2em 0.4em;
-}
-
-:deep(pre) {
-  background-color: #f6f8fa;
-  border-radius: 3px;
-  padding: 16px;
-  overflow: auto;
-}
-
-:deep(pre code) {
-  background-color: transparent;
-  padding: 0;
-}
-
-:deep(blockquote) {
-  color: #6a737d;
-  border-left: 0.25em solid #dfe2e5;
-  padding: 0 1em;
-  margin: 0 0 16px 0;
-}
-
-:deep(a) {
-  color: #0366d6;
-  text-decoration: none;
-}
-
-:deep(a:hover) {
-  text-decoration: underline;
-}
-
-/* KaTeX adjustments */
-:deep(.katex) {
-  font-size: 1em;
-  line-height: 1;
-}
-
-:deep(.katex-display) {
-  margin: 1em 0;
-  overflow-x: auto;
-  overflow-y: hidden;
-}
-
-:deep(.katex .base) {
-  position: relative;
-}
-
-:deep(.katex .vlist-t) {
-  vertical-align: baseline;
-}
-
-:deep(.katex sub) {
-  font-size: 0.7em;
-  vertical-align: baseline;
-  position: relative;
-  bottom: -0.25em;
-}
-
-:deep(.katex sup) {
-  font-size: 0.7em;
-  vertical-align: baseline;
-  position: relative;
-  top: -0.5em;
+  height: 100%;
+  border: none;
 }
 </style>
