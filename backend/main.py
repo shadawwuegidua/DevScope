@@ -357,7 +357,9 @@ async def _analysis_generator(username: str, client_host: str = "unknown"):
         yield {"type": "progress", "value": 40, "message": "正在分析最近提交历史与活跃度..."}
         logger.info(f"开始获取提交历史: {username}")
         commit_activity = github_client.get_user_commit_activity(
-            username, limit_repos=min(20, project_count)
+            username, 
+            limit_repos=min(20, project_count),
+            repos=repos  # 显式传入已排序的 repo 列表，确保分析真正活跃的仓库
         )
         commit_times = commit_activity.get("commit_times", [])
         recent_commits_data = commit_activity.get("recent_commits", [])
@@ -658,7 +660,11 @@ async def match_technology_stack(request: MatchRequest):
         project_count = len(repos)
         primary_language = _extract_primary_language(repos)
         repo_languages = _extract_languages(repos)
-        commit_activity = github_client.get_user_commit_activity(request.username)
+        # 显式传入 sorted repos，保证分析的一致性
+        commit_activity = github_client.get_user_commit_activity(
+            request.username,
+            repos=repos 
+        )
         commit_times = commit_activity.get("commit_times", [])
         commit_counts_by_repo = commit_activity.get("commit_counts_by_repo", {})
         # 基于星标与提交次数加权计算 Topic 列表

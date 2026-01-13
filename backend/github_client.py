@@ -174,7 +174,7 @@ class GitHubClient:
         return repos
 
     def get_user_repos_union(self, username: str, include_contrib: bool = True) -> List[Dict[str, Any]]:
-        """返回用户拥有的仓库与参与贡献的仓库的并集（去重）。"""
+        """返回用户拥有的仓库与参与贡献的仓库的并集（去重），按活跃时间倒序排列。"""
         owned = self.get_repos(username)
         if include_contrib:
             contrib = self.get_user_contributed_repos(username)
@@ -189,6 +189,15 @@ class GitHubClient:
                 continue
             seen.add(key)
             union.append(r)
+            
+        # 按 pushed_at 倒序排序 (优先检查最近活跃仓库)
+        # 这确保了 get_user_commit_activity 中的切片能命中真正活跃的仓库
+        def get_sort_key(repo: Dict[str, Any]) -> str:
+            val = repo.get("pushed_at") or repo.get("updated_at") or ""
+            return str(val)
+            
+        union.sort(key=get_sort_key, reverse=True)
+            
         logger.info(f"仓库并集完成: owned={len(owned)}, contrib={len(contrib)}, union={len(union)}")
         return union
 
@@ -225,9 +234,17 @@ class GitHubClient:
         return commits
 
     def get_user_commit_activity(
-        self, username: str, limit_repos: int = 20, per_repo_commits: int = 500
+        self, 
+        username: str, 
+        limit_repos: int = 20, 
+        per_repo_commits: int = 500,
+        repos: Optional[List[Dict[str, Any]]] = None
     ) -> Dict[str, Any]:
         """获取用户最近一年的提交活动时间戳。
+
+        参数:
+        - repos:如果不传，内部会调用 get_user_repos_union 获取。
+          如果建议传入已获取并排序好的 repos 列表，减少 API 调用并保证一致性。
 
         策略变更:
         - 采用 "Rolling 12 Months" 观测窗口。
@@ -247,8 +264,13 @@ class GitHubClient:
         since_str = since_date.isoformat()
 
         # 2. 获取仓库列表
-        # 使用拥有+贡献仓库的并集
-        repos = self.get_user_repos_union(username)
+        # 如果未传入 repos，则自行获取并排序
+        if repos is None:
+            repos = self.get_user_repos_union(username)
+        
+        # 获取用户 Profile 用于辅助匹配 (避免反复调用，应该在上层获取，这里简单再获取一次或假设 username)
+        # 为节约 API，这里只使用 username 和 repo owner name 进行匹配
+        
         logger.info(f"开始处理 {min(len(repos), limit_repos)} 个仓库的提交记录")
         
         timestamps: List[str] = []
@@ -264,9 +286,11 @@ class GitHubClient:
             
             logger.info(f"处理仓库 {idx}/{min(len(repos), limit_repos)}: {owner}/{name}")
             
-            # 4. 获取 Commit (使用 since 参数)
+            repo_commits: List[Dict[str, Any]] = []
+            
+            # 4.1 尝试标准获取 (author=username)
             try:
-                commits = self.get_commits(
+                standard_commits = self.get_commits(
                     owner, 
                     name, 
                     author=username,
@@ -274,26 +298,64 @@ class GitHubClient:
                     per_page=100, 
                     max_pages=max(1, int(per_repo_commits / 100))
                 )
-                logger.info(f"仓库 {owner}/{name} 获取到 {len(commits)} 条提交")
+                repo_commits.extend(standard_commits)
+            except Exception as e:
+                logger.warning(f"获取仓库 {owner}/{name} 的提交失败: {e}")
+            
+            # 4.2 补救策略：如果标准获取为空，尝试无 filter 获取并客户端匹配
+            # 场景：用户 Git 邮箱未绑定 GitHub 账户，导致 API author 筛选失效
+            # 修改：不仅针对 owner，对所有活跃仓库都尝试补救，特别是 contrib 仓库
+            if not repo_commits:
+                logger.info(f"仓库 {owner}/{name} 标准获取为空，尝试名称匹配补救...")
+                try:
+                    fallback_commits = self.get_commits(
+                        owner,
+                        name,
+                        author=None, # 不按 author 筛选
+                        since=since_str,
+                        per_page=100, # 检查最近 100 条，增加命中概率
+                        max_pages=1
+                    )
+                    
+                    # 客户端过滤：匹配 Git Author Name
+                    username_lower = username.lower()
+                    for c in fallback_commits:
+                        commit_author = c.get("commit", {}).get("author", {})
+                        author_name = commit_author.get("name", "").lower()
+                        
+                        # 简单的模糊匹配规则：如果 Git Name 等于用户名，或包含用户名
+                        if username_lower == author_name or username_lower in author_name:
+                            repo_commits.append(c)
+                            
+                    if repo_commits:
+                        logger.info(f"补救成功！在 {owner}/{name} 中找到 {len(repo_commits)} 条潜在提交")
+                        
+                except Exception as e:
+                    logger.warning(f"补救策略执行失败 {owner}/{name}: {e}")
+
+            logger.info(f"仓库 {owner}/{name} 最终有效提交: {len(repo_commits)}")
+            
+            # 5. 统计与聚合
+            if repo_commits:
                 repo_full = f"{owner}/{name}"
-                commit_counts_by_repo[repo_full] = len(commits)
-                for c in commits:
+                commit_counts_by_repo[repo_full] = len(repo_commits)
+                for c in repo_commits:
                     try:
-                        ts = c["commit"]["author"]["date"]
+                        # 优先使用 commit.author.date，其次 committer.date
+                        c_info = c.get("commit", {})
+                        ts = c_info.get("author", {}).get("date") or c_info.get("committer", {}).get("date")
+                        
                         if isinstance(ts, str):
                             timestamps.append(ts)
                             # 收集提交详情
                             recent_commits.append({
-                                "message": c["commit"]["message"],
+                                "message": c_info.get("message", ""),
                                 "repo_name": repo_full,
                                 "date": ts,
-                                "url": c["html_url"]
+                                "url": c.get("html_url", "")
                             })
                     except Exception:
                         continue
-            except Exception as e:
-                logger.warning(f"获取仓库 {owner}/{name} 的提交失败: {e}")
-                continue
         
         # 按时间倒序排序并取前 20 条
         recent_commits.sort(key=lambda x: x["date"], reverse=True)
