@@ -9,6 +9,10 @@
 <!-- ![DevScope Banner](path/to/banner.png) -->
 
 ## Table of Contents
+<div align="center">
+  <img src="assets/1658984090518c59925f2668b3b0ff3b.png" alt="DevScope Overview" width="100%">
+</div>
+
 - [Background](#background)
 - [Introduction](#introduction)
 - [Features](#features)
@@ -120,7 +124,7 @@ npm run dev:all
 
 ## Usage Guide
 
-1.  **Start the System**: Ensure both backend (Port 8000) and frontend (Port 5173) are running.
+1.  **Start the System**: Ensure both backend (Port 8000) and frontend (Port 5173) are running, then visit `http://localhost:5173` in your browser.
 2.  **Analyze Developer**: Enter a GitHub username (e.g., `torvalds`) in the search bar.
 3.  **Explore Insights**:
     *   View the **Gravity Graph** to see tech stack affinity.
