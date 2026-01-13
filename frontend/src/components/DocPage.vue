@@ -17,14 +17,13 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import pdfFile from '../assets/DATA_ALGORITHM_THEORY.pdf'
 
 defineEmits<{
   (e: 'back'): void
 }>()
 
-// Vite handle assets with hashing, so we just use the imported URL
-const pdfUrl = ref(pdfFile)
+// 添加时间戳防止浏览器缓存旧的 PDF 文件
+const pdfUrl = ref(`/DATA_ALGORITHM_THEORY.pdf?t=${new Date().getTime()}`)
 </script>
 
 <style scoped>
